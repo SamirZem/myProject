@@ -35,6 +35,10 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        // Scaffold/TopAppBar (used on every screen) are behind Material3's experimental API
+        // marker in this BOM version; without this the compiler treats using them as an error,
+        // not just a warning.
+        freeCompilerArgs += "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
     }
 
     buildFeatures {

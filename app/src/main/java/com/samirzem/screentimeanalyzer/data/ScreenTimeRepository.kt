@@ -129,7 +129,9 @@ class ScreenTimeRepository(
                 lastUsedAtMs = stat.lastUsedAtMs,
             )
         }
-        val hourlyRows = bucket.hourlyMs.mapIndexedNotNull { hour, ms ->
+        // LongArray has no mapIndexedNotNull (that's only defined for Iterable/Array<T>),
+        // so go through withIndex() first.
+        val hourlyRows = bucket.hourlyMs.withIndex().mapNotNull { (hour, ms) ->
             if (ms > 0) HourlyUsageEntity(bucket.epochDay, hour, ms) else null
         }
         val unlockRow = DailyUnlockSummaryEntity(

@@ -5,6 +5,9 @@ on:
     branches: ["**"]
   workflow_dispatch: {}
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -27,9 +30,26 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
 
-      - name: Upload APK
+      - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: temps-ecran-pro-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+      # Also publish as a raw (unzipped) release asset so it can be downloaded
+      # and installed directly from a phone browser - workflow artifacts are
+      # always zipped, which is awkward on Android.
+      - name: Publish APK to "latest-debug-apk" release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-debug-apk
+          name: Dernier APK debug (${{ github.ref_name }})
+          body: |
+            APK debug généré automatiquement depuis la branche `${{ github.ref_name }}`
+            (commit ${{ github.sha }}). Non destiné au Play Store - à installer
+            directement sur l'appareil ("sources inconnues" à autoriser).
+          prerelease: true
+          files: app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

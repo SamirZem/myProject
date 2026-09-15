@@ -11,6 +11,9 @@ The app calls **this** server; this server calls Supercell using the key from
 
 - `GET /api/player/:tag` → proxies `GET /v1/players/{tag}`
 - `GET /api/player/:tag/battlelog` → proxies `GET /v1/players/{tag}/battlelog`
+- `GET /api/cards` → proxies `GET /v1/cards` (the full card list, `{ items: [{ id, name, ... }] }`), cached
+  for an hour server-side. Used by the app to resolve the numeric card IDs in a pasted deck-share
+  link (`https://link.clashroyale.com/deck/en?deck=26000046;...`) into card names.
 - `GET /health` → `{ "status": "ok" }`
 
 `:tag` can be passed with or without the leading `#` (e.g. `/api/player/%23ABC123` or

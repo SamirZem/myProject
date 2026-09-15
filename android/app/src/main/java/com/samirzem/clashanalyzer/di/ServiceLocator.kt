@@ -4,6 +4,7 @@ import android.content.Context
 import com.samirzem.clashanalyzer.capture.CalibrationStore
 import com.samirzem.clashanalyzer.capture.CardTemplateStore
 import com.samirzem.clashanalyzer.capture.MatchSessionController
+import com.samirzem.clashanalyzer.data.DeckImportRepository
 import com.samirzem.clashanalyzer.data.MatchRepository
 import com.samirzem.clashanalyzer.data.SettingsDataStore
 import com.samirzem.clashanalyzer.data.local.AppDatabase
@@ -44,6 +45,10 @@ object ServiceLocator {
 
     val matchRepository: MatchRepository by lazy {
         MatchRepository(database.matchAnalysisDao(), settings) { backendApi() }
+    }
+
+    val deckImportRepository: DeckImportRepository by lazy {
+        DeckImportRepository { backendApi() }
     }
 
     val matchSessionController: MatchSessionController by lazy {

@@ -29,6 +29,11 @@ class ClashRoyaleClient {
     return this._get(`/players/${ClashRoyaleClient.encodeTag(rawTag)}/battlelog`);
   }
 
+  /** The full card list (name, id, elixir cost, max level...) — used to resolve deck-link card IDs to names. */
+  async getCards() {
+    return this._get('/cards');
+  }
+
   async _get(path) {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       headers: {

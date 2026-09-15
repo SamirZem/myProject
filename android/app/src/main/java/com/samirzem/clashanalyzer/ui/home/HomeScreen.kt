@@ -28,6 +28,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.samirzem.clashanalyzer.data.DeckImportResult
 import com.samirzem.clashanalyzer.di.ServiceLocator
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -47,7 +48,9 @@ fun HomeScreen(
     var playerTag by remember { mutableStateOf("") }
     var backendUrl by remember { mutableStateOf("") }
     var deckInput by remember { mutableStateOf("") }
+    var deckLinkInput by remember { mutableStateOf("") }
     var statusMessage by remember { mutableStateOf<String?>(null) }
+    var isImportingDeck by remember { mutableStateOf(false) }
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
         playerTag = ServiceLocator.settings.playerTag.first().orEmpty()
@@ -113,6 +116,37 @@ fun HomeScreen(
                         label = { Text("Ton deck actuel (8 noms séparés par des virgules)") },
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    OutlinedTextField(
+                        value = deckLinkInput,
+                        onValueChange = { deckLinkInput = it },
+                        label = { Text("...ou colle un lien de deck (menu Deck > Copier le lien, en jeu)") },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Button(
+                        enabled = !isImportingDeck,
+                        onClick = {
+                            isImportingDeck = true
+                            scope.launch {
+                                when (val result = ServiceLocator.deckImportRepository.importFromLink(deckLinkInput)) {
+                                    is DeckImportResult.Success -> {
+                                        deckInput = result.cardNames.joinToString(", ")
+                                        statusMessage = "Deck importé (${result.cardNames.size} cartes) — pense à Enregistrer."
+                                    }
+                                    is DeckImportResult.PartialSuccess -> {
+                                        deckInput = result.resolved.joinToString(", ")
+                                        statusMessage = "${result.resolved.size} carte(s) importée(s), ${result.unresolvedCount} non reconnue(s) — pense à Enregistrer."
+                                    }
+                                    is DeckImportResult.NotADeckLink -> {
+                                        statusMessage = "Ce texte ne ressemble pas à un lien de deck Clash Royale."
+                                    }
+                                    is DeckImportResult.Error -> {
+                                        statusMessage = "Erreur : ${result.message}"
+                                    }
+                                }
+                                isImportingDeck = false
+                            }
+                        },
+                    ) { Text(if (isImportingDeck) "Import en cours…" else "Importer le deck depuis le lien") }
                     Button(onClick = {
                         scope.launch {
                             if (backendUrl.isNotBlank()) ServiceLocator.settings.setBackendBaseUrl(backendUrl)

@@ -3,9 +3,12 @@
 const express = require('express');
 const { ClashRoyaleClient } = require('./clashRoyaleClient');
 
+const CARDS_CACHE_TTL_MS = 60 * 60 * 1000; // the card list barely changes; avoid hammering Supercell's API on every deck-link import
+
 function createApp(apiKey = process.env.CLASH_ROYALE_API_KEY) {
   const app = express();
   const client = new ClashRoyaleClient(apiKey);
+  let cardsCache = null; // { body, fetchedAt }
 
   // Minimal CORS: the app only ever calls this from the Android client, but keeping it open
   // makes local testing (curl, browser) painless. Lock this down to your own origins if you
@@ -32,6 +35,18 @@ function createApp(apiKey = process.env.CLASH_ROYALE_API_KEY) {
     try {
       const battleLog = await client.getBattleLog(req.params.tag);
       res.json(battleLog);
+    } catch (err) {
+      forwardError(res, err);
+    }
+  });
+
+  app.get('/api/cards', async (_req, res) => {
+    try {
+      const isFresh = cardsCache && Date.now() - cardsCache.fetchedAt < CARDS_CACHE_TTL_MS;
+      if (!isFresh) {
+        cardsCache = { body: await client.getCards(), fetchedAt: Date.now() };
+      }
+      res.json(cardsCache.body);
     } catch (err) {
       forwardError(res, err);
     }

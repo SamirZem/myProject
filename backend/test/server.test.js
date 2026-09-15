@@ -70,6 +70,24 @@ test('an upstream error is forwarded with its status code', async () => {
   );
 });
 
+test('GET /api/cards forwards the card list and caches it across requests', async () => {
+  let callCount = 0;
+  await withServer(
+    async () => {
+      callCount += 1;
+      return { ok: true, status: 200, json: async () => ({ items: [{ id: 26000000, name: 'Knight' }] }) };
+    },
+    async (port) => {
+      const first = await requestJson(port, '/api/cards');
+      const second = await requestJson(port, '/api/cards');
+      assert.strictEqual(first.status, 200);
+      assert.strictEqual(first.body.items[0].name, 'Knight');
+      assert.deepStrictEqual(second.body, first.body);
+      assert.strictEqual(callCount, 1, 'expected the second request to be served from cache');
+    },
+  );
+});
+
 test('unknown routes return 404', async () => {
   await withServer(
     async () => ({ ok: true, status: 200, json: async () => ({}) }),

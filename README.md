@@ -32,18 +32,24 @@ couleurs de pixels sur des zones calibrées), pas un modèle entraîné pour rec
 chaque troupe adverse ou son placement exact au pixel près. Elle donne le *timing* et les
 *échanges d'élixir*, pas une reconnaissance parfaite de chaque unité sur le terrain.
 
-## Ce qui n'a pas pu être testé ici
+## Build et APK
 
-Ce projet a été développé dans un environnement sans SDK Android ni appareil/émulateur, et sans
-accès au dépôt Maven de Google (`dl.google.com`) qui héberge l'Android Gradle Plugin et AndroidX.
-Concrètement :
+Cet environnement de développement n'a pas d'accès au dépôt Maven de Google (`dl.google.com`, qui
+héberge l'Android Gradle Plugin et AndroidX) ni de SDK Android/émulateur — impossible d'y compiler
+`android/app` directement. Le workflow GitHub Actions
+[`android-build.yml`](.github/workflows/android-build.yml) s'en charge à la place (les runners
+GitHub ont un accès réseau complet) : il tourne à chaque push sur `android/**`, exécute les tests
+du module `analyzer`, puis build `app-debug.apk` et le publie comme artefact téléchargeable sur
+l'onglet **Actions** du dépôt.
 
-- **`android/analyzer` a été compilé et testé avec succès** (`./gradlew :analyzer:test`, 10 tests
-  qui passent) — c'est le module qui ne dépend pas du SDK Android.
-- **`android/app` n'a pas pu être compilé ni exécuté** dans cette session. Le code a été écrit
-  avec soin à partir des API Android standard (MediaProjection, Compose, Room, Retrofit, DataStore)
-  mais **doit être ouvert dans Android Studio, sur une machine avec accès réseau normal, pour être
-  buildé, corrigé si besoin et testé sur un vrai Pixel 8 Pro**.
+- **`android/analyzer`** a été compilé et testé avec succès aussi bien localement
+  (`./gradlew :analyzer:test`, 10 tests qui passent) que sur CI.
+- **`android/app`** build maintenant **avec succès sur CI** (`./gradlew :app:assembleDebug`) —
+  plusieurs bugs réels ont été trouvés et corrigés en cours de route (voir l'historique de commits
+  sur la branche) : couplage d'un type entre modules qui perturbait KSP/Room, API Material3
+  expérimentale utilisée sans opt-in. Il reste conseillé d'ouvrir le projet dans Android Studio
+  avant d'installer l'APK sur un vrai Pixel 8 Pro, pour repérer d'éventuels soucis que seul un test
+  sur device révèle (permissions, calibration, performance).
 - Les **valeurs de calibration par défaut** (position de la barre d'élixir, des tours, des cases
   de cartes, couleurs de référence) sont des estimations raisonnables de la mise en page de Clash
   Royale, pas des mesures faites sur un vrai écran. Il faudra presque certainement les ajuster via

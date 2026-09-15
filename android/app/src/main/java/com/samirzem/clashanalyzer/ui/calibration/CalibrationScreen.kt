@@ -17,7 +17,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -43,6 +42,7 @@ import com.samirzem.clashanalyzer.capture.CaptureForegroundService
 import com.samirzem.clashanalyzer.capture.FrameAnalyzer
 import com.samirzem.clashanalyzer.capture.NormalizedRect
 import com.samirzem.clashanalyzer.di.ServiceLocator
+import com.samirzem.clashanalyzer.ui.components.CardNamePicker
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -157,7 +157,12 @@ fun CalibrationScreen() {
                     "qu'elle soit visible dans ce slot, puis capture son empreinte.",
                 style = MaterialTheme.typography.bodySmall,
             )
-            OutlinedTextField(value = cardNameForTemplate, onValueChange = { cardNameForTemplate = it }, label = { Text("Nom exact de la carte (ex: Hog Rider)") })
+            CardNamePicker(
+                value = cardNameForTemplate,
+                onValueChange = { cardNameForTemplate = it },
+                label = "Nom de la carte — tape pour filtrer",
+                modifier = Modifier.fillMaxWidth(),
+            )
             Button(onClick = {
                 val f = frame
                 if (f != null && cardNameForTemplate.isNotBlank() && selectedRegion in 1..4) {

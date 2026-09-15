@@ -24,7 +24,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -50,6 +49,7 @@ import com.samirzem.clashanalyzer.capture.DeckScreenLayout
 import com.samirzem.clashanalyzer.capture.FrameAnalyzer
 import com.samirzem.clashanalyzer.capture.NormalizedRect
 import com.samirzem.clashanalyzer.di.ServiceLocator
+import com.samirzem.clashanalyzer.ui.components.CardNamePicker
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -131,10 +131,10 @@ fun DeckImportScreen() {
                 layout = layout.copy(cardRects = layout.cardRects.toMutableList().also { it[selectedSlot] = sanitized })
             }
 
-            OutlinedTextField(
+            CardNamePicker(
                 value = cardNames[selectedSlot],
                 onValueChange = { cardNames[selectedSlot] = it },
-                label = { Text("Nom exact de la carte ${selectedSlot + 1} (ex: Hog Rider)") },
+                label = "Carte ${selectedSlot + 1} — tape pour filtrer",
                 modifier = Modifier.fillMaxWidth(),
             )
 

@@ -26,11 +26,14 @@ object CardTag {
 }
 
 data class CardInfo(
+    /** Canonical name, matching the official Clash Royale API's "name" field (always English, regardless of the player's game language). Used for storage, deck matching, and template lookup — never shown to the user directly. */
     val name: String,
+    /** Display name as it appears in the French Clash Royale client, shown in pickers/UI. Best-effort translation; falls back to [name] when unset. */
+    val frenchName: String,
     val elixirCost: Int,
     val type: CardType,
     val tags: Set<String> = emptySet(),
 )
 
 /** Fallback used for any card the API returns that isn't in [CardDatabase] (e.g. a brand new release). */
-val UNKNOWN_CARD = CardInfo(name = "unknown", elixirCost = 4, type = CardType.TROOP, tags = emptySet())
+val UNKNOWN_CARD = CardInfo(name = "unknown", frenchName = "Carte inconnue", elixirCost = 4, type = CardType.TROOP, tags = emptySet())

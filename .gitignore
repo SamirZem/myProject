@@ -1,0 +1,22 @@
+# Gradle
+android/.gradle/
+**/build/
+android/local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+.DS_Store
+
+# Android
+*.apk
+*.aab
+captures/
+.cxx/
+
+# Node
+backend/node_modules/
+backend/.env
+
+# Misc
+*.log

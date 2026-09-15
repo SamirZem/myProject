@@ -39,6 +39,7 @@ fun HomeScreen(
     onStopCapture: () -> Unit,
     onOpenCalibration: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenDeckImport: () -> Unit,
 ) {
     val controller = ServiceLocator.matchSessionController
     val isRunning by controller.isRunning.collectAsState()
@@ -98,10 +99,16 @@ fun HomeScreen(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Paramètres", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+                    Text(
+                        "L'analyse en direct fonctionne sans rien remplir ci-dessous. L'URL du serveur relais " +
+                            "n'est utile que pour le recoupement de score via l'API officielle et l'import de " +
+                            "deck par lien — ignore-la si tu ne t'en sers pas.",
+                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    )
                     OutlinedTextField(
                         value = backendUrl,
                         onValueChange = { backendUrl = it },
-                        label = { Text("URL du serveur relais (ex: https://xxx.onrender.com/)") },
+                        label = { Text("URL du serveur relais (optionnel)") },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
@@ -116,10 +123,13 @@ fun HomeScreen(
                         label = { Text("Ton deck actuel (8 noms séparés par des virgules)") },
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    OutlinedButton(onClick = onOpenDeckImport, modifier = Modifier.fillMaxWidth()) {
+                        Text("Importer le deck depuis une capture d'écran (sans serveur relais)")
+                    }
                     OutlinedTextField(
                         value = deckLinkInput,
                         onValueChange = { deckLinkInput = it },
-                        label = { Text("...ou colle un lien de deck (menu Deck > Copier le lien, en jeu)") },
+                        label = { Text("...ou colle un lien de deck (nécessite le serveur relais)") },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Button(

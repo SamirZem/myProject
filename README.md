@@ -12,7 +12,7 @@ disque : les images sont traitées en mémoire et jetées au fur et à mesure.
 |---|---|
 | `android/analyzer` | Le moteur d'analyse, en Kotlin pur (aucune dépendance Android). Contient toute la logique : base de cartes, heuristiques post-match et heuristiques "live" (trades d'élixir, sur-investissement, défense manquée, gestion du double élixir). Testable avec `gradle`/`gradlew` seul, sans SDK Android. |
 | `android/app` | L'application Android : capture d'écran (`MediaProjection`), lecture de pixels (élixir/PV/cartes), UI Compose, base locale (Room), calibration. |
-| `backend` | Petit serveur relais (Node/Express) devant l'API officielle Clash Royale. Obligatoire car la clé API de Supercell est verrouillée à une IP fixe — elle ne peut donc jamais vivre dans l'app mobile. |
+| `backend` | Petit serveur relais (Node/Express) **optionnel** devant l'API officielle Clash Royale. Utile uniquement pour le recoupement de score via l'API et l'import de deck par lien — la clé API de Supercell est verrouillée à une IP fixe, donc elle ne peut jamais vivre dans l'app mobile, il faut ce serveur pour ces deux fonctionnalités-là. L'analyse principale (capture live) n'en a pas besoin du tout. |
 
 ## Comment ça analyse une partie
 
@@ -69,7 +69,7 @@ l'onglet **Actions** du dépôt.
 
 ## Démarrage rapide
 
-### 1. Backend
+### 1. Backend (optionnel — passe directement à l'étape 2 si tu veux juste l'analyse live)
 
 ```bash
 cd backend
@@ -79,8 +79,10 @@ npm test                # tourne sans clé API, avec un fetch mocké
 npm start
 ```
 
-Déploie-le ensuite sur un service à IP fixe (VPS, Render, Fly.io, Railway...) — voir
-`backend/README.md`. Restreins la clé API à cette IP sur developer.clashroyale.com.
+Déploie-le ensuite sur un service à IP fixe (VPS...) — voir `backend/README.md`. Restreins la clé
+API à cette IP sur developer.clashroyale.com. Sans serveur ni téléphone à IP fixe, ces deux
+fonctionnalités précises ne sont pas faisables — tout le reste de l'app (capture live, y compris
+l'import de deck par capture d'écran) fonctionne sans rien déployer.
 
 ### 2. App Android
 
@@ -93,11 +95,14 @@ Puis ouvre le dossier `android/` dans Android Studio pour builder et lancer `app
 Pro (il te faudra le SDK Android, qu'Android Studio installe automatiquement).
 
 Dans l'app :
-1. **Paramètres** (écran d'accueil) : renseigne l'URL de ton serveur relais, ton tag joueur, et
-   ton deck actuel (8 noms de cartes).
+1. **Paramètres** (écran d'accueil) : renseigne ton deck actuel — soit à la main (8 noms), soit
+   via **Importer le deck depuis une capture d'écran** (photo de ton menu Deck en jeu, aucun
+   serveur requis : ça enregistre le deck *et* une empreinte de reconnaissance par carte d'un
+   coup). L'URL du serveur relais et le tag joueur ne servent qu'au recoupement API / import par
+   lien — laisse-les vides sinon.
 2. **Calibration** : lance une capture, ouvre Clash Royale, reviens dans l'app et ajuste les
-   zones (barre d'élixir, cases de main, tours) sur l'aperçu en direct. Capture aussi une
-   empreinte pour chacune de tes 8 cartes (aucune image Supercell n'est jamais intégrée à l'app —
-   les empreintes viennent uniquement de ton propre écran).
+   zones (barre d'élixir, cases de main, tours) sur l'aperçu en direct. Tu peux aussi y capturer
+   des empreintes de carte pendant une partie (aucune image Supercell n'est jamais intégrée à
+   l'app — les empreintes viennent uniquement de ton propre écran).
 3. **Démarrer la capture**, joue ta partie, puis **Arrêter et analyser**.
 4. Consulte le résultat dans **Historique**.

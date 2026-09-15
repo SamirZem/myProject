@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.samirzem.clashanalyzer.ui.calibration.CalibrationScreen
+import com.samirzem.clashanalyzer.ui.deckimport.DeckImportScreen
 import com.samirzem.clashanalyzer.ui.detail.MatchDetailScreen
 import com.samirzem.clashanalyzer.ui.history.MatchListScreen
 import com.samirzem.clashanalyzer.ui.home.HomeScreen
@@ -13,6 +14,7 @@ import com.samirzem.clashanalyzer.ui.home.HomeScreen
 private object Routes {
     const val HOME = "home"
     const val CALIBRATION = "calibration"
+    const val DECK_IMPORT = "deckImport"
     const val HISTORY = "history"
     const val DETAIL = "detail/{id}"
     fun detail(id: Long) = "detail/$id"
@@ -29,9 +31,11 @@ fun AppNavHost(onRequestCapture: () -> Unit, onStopCapture: () -> Unit) {
                 onStopCapture = onStopCapture,
                 onOpenCalibration = { navController.navigate(Routes.CALIBRATION) },
                 onOpenHistory = { navController.navigate(Routes.HISTORY) },
+                onOpenDeckImport = { navController.navigate(Routes.DECK_IMPORT) },
             )
         }
         composable(Routes.CALIBRATION) { CalibrationScreen() }
+        composable(Routes.DECK_IMPORT) { DeckImportScreen() }
         composable(Routes.HISTORY) { MatchListScreen(onOpenDetail = { id -> navController.navigate(Routes.detail(id)) }) }
         composable(Routes.DETAIL) { backStackEntry ->
             val id = backStackEntry.arguments?.getString("id")?.toLongOrNull() ?: return@composable

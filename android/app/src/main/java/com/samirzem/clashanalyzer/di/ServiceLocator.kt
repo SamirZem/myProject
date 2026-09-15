@@ -3,6 +3,7 @@ package com.samirzem.clashanalyzer.di
 import android.content.Context
 import com.samirzem.clashanalyzer.capture.CalibrationStore
 import com.samirzem.clashanalyzer.capture.CardTemplateStore
+import com.samirzem.clashanalyzer.capture.DeckScreenLayoutStore
 import com.samirzem.clashanalyzer.capture.MatchSessionController
 import com.samirzem.clashanalyzer.data.DeckImportRepository
 import com.samirzem.clashanalyzer.data.MatchRepository
@@ -39,6 +40,7 @@ object ServiceLocator {
     val settings: SettingsDataStore by lazy { SettingsDataStore(appContext) }
     val calibrationStore: CalibrationStore by lazy { CalibrationStore(appContext) }
     val cardTemplateStore: CardTemplateStore by lazy { CardTemplateStore(appContext) }
+    val deckScreenLayoutStore: DeckScreenLayoutStore by lazy { DeckScreenLayoutStore(appContext) }
 
     private val database: AppDatabase by lazy { AppDatabase.getInstance(appContext) }
     private val appScope: CoroutineScope by lazy { CoroutineScope(SupervisorJob() + Dispatchers.Default) }

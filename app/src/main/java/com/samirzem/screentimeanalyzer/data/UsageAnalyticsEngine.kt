@@ -41,6 +41,12 @@ class UsageAnalyticsEngine(context: Context) {
             val packageName = event.packageName ?: continue
             when (event.eventType) {
                 UsageEvents.Event.MOVE_TO_FOREGROUND -> {
+                    // A stray extra MOVE_TO_FOREGROUND for a package that's already
+                    // "open" means we missed its MOVE_TO_BACKGROUND - close that
+                    // session out here instead of silently discarding its time.
+                    openSessions[packageName]?.let { previousStart ->
+                        recordSession(::dayFor, packageName, previousStart, event.timeStamp, startMs, endMs)
+                    }
                     openSessions[packageName] = event.timeStamp
                 }
 
@@ -85,8 +91,15 @@ class UsageAnalyticsEngine(context: Context) {
     ) {
         if (packageName in EXCLUDED_USAGE_PACKAGES) return
         val start = rawStart.coerceIn(rangeStart, rangeEnd)
-        val end = rawEnd.coerceIn(rangeStart, rangeEnd)
-        if (end <= start) return
+        val clampedEnd = rawEnd.coerceIn(rangeStart, rangeEnd)
+        if (clampedEnd <= start) return
+
+        // A session whose MOVE_TO_BACKGROUND was never logged (the OS killing a
+        // backgrounded/cached process doesn't always emit one - a known platform
+        // quirk) would otherwise be timed all the way to "now" or the end of the
+        // query window, inflating it to hours or even days. Cap any single
+        // continuous session to a ceiling no genuine foreground use would hit.
+        val end = minOf(clampedEnd, start + MAX_SESSION_DURATION_MS)
 
         val sessionDurationMs = end - start
         val startDayBucket = dayFor(epochDayOf(start))
@@ -164,5 +177,6 @@ class UsageAnalyticsEngine(context: Context) {
 
     private companion object {
         const val ONE_HOUR_MS = 3_600_000L
+        const val MAX_SESSION_DURATION_MS = 3 * 60 * 60 * 1000L
     }
 }

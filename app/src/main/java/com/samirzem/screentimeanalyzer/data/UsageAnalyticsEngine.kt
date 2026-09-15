@@ -56,9 +56,10 @@ class UsageAnalyticsEngine(context: Context) {
                 }
 
                 UsageEvents.Event.KEYGUARD_HIDDEN -> {
-                    val epochDay = epochDayOf(event.timeStamp)
-                    val bucket = dayFor(epochDay)
+                    val zdt = Instant.ofEpochMilli(event.timeStamp).atZone(zoneId)
+                    val bucket = dayFor(zdt.toLocalDate().toEpochDay())
                     bucket.unlockCount++
+                    bucket.unlockHourly[zdt.hour]++
                     if (bucket.firstUnlockAtMs == null || event.timeStamp < bucket.firstUnlockAtMs!!) {
                         bucket.firstUnlockAtMs = event.timeStamp
                     }
@@ -125,6 +126,7 @@ class UsageAnalyticsEngine(context: Context) {
             app.totalTimeMs += sliceMs
             app.firstUsedAtMs = minOf(app.firstUsedAtMs, cursor)
             app.lastUsedAtMs = maxOf(app.lastUsedAtMs, sliceEnd)
+            app.hourlyMs[zdt.hour] += sliceMs
             bucket.hourlyMs[zdt.hour] += sliceMs
 
             cursor = sliceEnd
@@ -140,11 +142,13 @@ class UsageAnalyticsEngine(context: Context) {
         var longestSessionMs: Long = 0
         var firstUsedAtMs: Long = Long.MAX_VALUE
         var lastUsedAtMs: Long = 0
+        val hourlyMs = LongArray(24)
     }
 
     private class MutableDayAccumulator(val epochDay: Long) {
         val apps = mutableMapOf<String, MutableAppAccumulator>()
         val hourlyMs = LongArray(24)
+        val unlockHourly = IntArray(24)
         var unlockCount: Int = 0
         var firstUnlockAtMs: Long? = null
         var lastUnlockAtMs: Long? = null
@@ -160,6 +164,7 @@ class UsageAnalyticsEngine(context: Context) {
                     longestSessionMs = acc.longestSessionMs,
                     firstUsedAtMs = acc.firstUsedAtMs,
                     lastUsedAtMs = acc.lastUsedAtMs,
+                    hourlyMs = acc.hourlyMs,
                 )
             }.sortedByDescending { it.totalTimeMs }
 
@@ -171,6 +176,7 @@ class UsageAnalyticsEngine(context: Context) {
                 unlockCount = unlockCount,
                 firstUnlockAtMs = firstUnlockAtMs,
                 lastUnlockAtMs = lastUnlockAtMs,
+                unlockHourly = unlockHourly,
             )
         }
     }

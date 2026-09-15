@@ -2,6 +2,8 @@ package com.samirzem.screentimeanalyzer.ui.trends
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.samirzem.screentimeanalyzer.data.AppInfoResolver
+import com.samirzem.screentimeanalyzer.data.ResolvedAppInfo
 import com.samirzem.screentimeanalyzer.data.ScreenTimeRepository
 import com.samirzem.screentimeanalyzer.util.TimeUtils
 import java.time.DayOfWeek
@@ -16,17 +18,32 @@ import kotlinx.coroutines.launch
 
 data class WeekdayAverageUi(val label: String, val averageMs: Long)
 
+data class TopAppUsage(val info: ResolvedAppInfo, val totalTimeMs: Long)
+
+data class TimeOfDaySegmentUi(
+    val label: String,
+    val hourRangeLabel: String,
+    val totalMs: Long,
+    val topApps: List<TopAppUsage>,
+)
+
 data class TrendsUiState(
     val isLoading: Boolean = true,
     val weeklySeries: List<Long> = emptyList(),
     val weeklyLabels: List<String> = emptyList(),
     val hourlyMs: LongArray = LongArray(24),
+    val hourlyTopApps: Map<Int, List<TopAppUsage>> = emptyMap(),
     val weekdayAverages: List<WeekdayAverageUi> = emptyList(),
     val totalUnlocksWeek: Int = 0,
     val averageUnlocksPerDay: Double = 0.0,
+    val unlockHourly: LongArray = LongArray(24),
+    val timeOfDaySegments: List<TimeOfDaySegmentUi> = emptyList(),
 )
 
-class TrendsViewModel(private val repository: ScreenTimeRepository) : ViewModel() {
+class TrendsViewModel(
+    private val repository: ScreenTimeRepository,
+    private val appInfoResolver: AppInfoResolver,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TrendsUiState())
     val uiState: StateFlow<TrendsUiState> = _uiState.asStateFlow()
@@ -43,11 +60,32 @@ class TrendsViewModel(private val repository: ScreenTimeRepository) : ViewModel(
             val buckets = repository.getDayBuckets(today - (ANALYSIS_DAYS - 1), today)
 
             val hourly = LongArray(24)
+            val unlockHourly = LongArray(24)
+            val hourlyAppTotals = Array(24) { mutableMapOf<String, Long>() }
             val byWeekday = mutableMapOf<DayOfWeek, MutableList<Long>>()
+
             for (bucket in buckets) {
-                for (h in 0 until 24) hourly[h] += bucket.hourlyMs[h]
+                for (h in 0 until 24) {
+                    hourly[h] += bucket.hourlyMs[h]
+                    unlockHourly[h] += bucket.unlockHourly[h]
+                }
+                for (stat in bucket.perApp) {
+                    for (h in 0 until 24) {
+                        val ms = stat.hourlyMs[h]
+                        if (ms > 0) {
+                            hourlyAppTotals[h][stat.packageName] = (hourlyAppTotals[h][stat.packageName] ?: 0L) + ms
+                        }
+                    }
+                }
                 val weekday = LocalDate.ofEpochDay(bucket.epochDay).dayOfWeek
                 byWeekday.getOrPut(weekday) { mutableListOf() }.add(bucket.totalScreenTimeMs)
+            }
+
+            val hourlyTopApps = (0 until 24).associateWith { hour ->
+                hourlyAppTotals[hour].entries
+                    .sortedByDescending { it.value }
+                    .take(TOP_APPS_PER_BREAKDOWN)
+                    .map { (pkg, ms) -> TopAppUsage(appInfoResolver.resolve(pkg), ms) }
             }
 
             val weekdayAverages = DayOfWeek.values().map { day ->
@@ -61,11 +99,30 @@ class TrendsViewModel(private val repository: ScreenTimeRepository) : ViewModel(
 
             val lastWeek = buckets.takeLast(7)
 
+            val timeOfDaySegments = SEGMENTS.map { segment ->
+                val segmentTotals = mutableMapOf<String, Long>()
+                for (h in segment.hours) {
+                    hourlyAppTotals[h].forEach { (pkg, ms) ->
+                        segmentTotals[pkg] = (segmentTotals[pkg] ?: 0L) + ms
+                    }
+                }
+                TimeOfDaySegmentUi(
+                    label = segment.label,
+                    hourRangeLabel = segment.rangeLabel,
+                    totalMs = segment.hours.sumOf { hourly[it] },
+                    topApps = segmentTotals.entries
+                        .sortedByDescending { it.value }
+                        .take(TOP_APPS_PER_BREAKDOWN)
+                        .map { (pkg, ms) -> TopAppUsage(appInfoResolver.resolve(pkg), ms) },
+                )
+            }
+
             _uiState.value = TrendsUiState(
                 isLoading = false,
                 weeklySeries = lastWeek.map { it.totalScreenTimeMs },
                 weeklyLabels = lastWeek.map { dayLabel(it.epochDay) },
                 hourlyMs = hourly,
+                hourlyTopApps = hourlyTopApps,
                 weekdayAverages = weekdayAverages,
                 totalUnlocksWeek = lastWeek.sumOf { it.unlockCount },
                 averageUnlocksPerDay = if (lastWeek.isNotEmpty()) {
@@ -73,6 +130,8 @@ class TrendsViewModel(private val repository: ScreenTimeRepository) : ViewModel(
                 } else {
                     0.0
                 },
+                unlockHourly = unlockHourly,
+                timeOfDaySegments = timeOfDaySegments,
             )
         }
     }
@@ -82,7 +141,17 @@ class TrendsViewModel(private val repository: ScreenTimeRepository) : ViewModel(
         return date.format(DateTimeFormatter.ofPattern("EEE", Locale.FRENCH)).replaceFirstChar { it.uppercase() }
     }
 
+    private class Segment(val label: String, val rangeLabel: String, val hours: IntRange)
+
     private companion object {
         const val ANALYSIS_DAYS = 28L
+        const val TOP_APPS_PER_BREAKDOWN = 5
+
+        val SEGMENTS = listOf(
+            Segment("Nuit", "0h-6h", 0..5),
+            Segment("Matin", "6h-12h", 6..11),
+            Segment("Après-midi", "12h-18h", 12..17),
+            Segment("Soir", "18h-24h", 18..23),
+        )
     }
 }

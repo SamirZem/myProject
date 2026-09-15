@@ -2,6 +2,8 @@ package com.samirzem.screentimeanalyzer.data
 
 import com.samirzem.screentimeanalyzer.data.local.DailyAppUsageEntity
 import com.samirzem.screentimeanalyzer.data.local.DailyUnlockSummaryEntity
+import com.samirzem.screentimeanalyzer.data.local.HourlyAppUsageEntity
+import com.samirzem.screentimeanalyzer.data.local.HourlyUnlockEntity
 import com.samirzem.screentimeanalyzer.data.local.HourlyUsageEntity
 import com.samirzem.screentimeanalyzer.data.local.UsageDao
 import com.samirzem.screentimeanalyzer.util.TimeUtils
@@ -76,6 +78,8 @@ class ScreenTimeRepository(
     suspend fun pruneOlderThan(epochDay: Long) = withContext(Dispatchers.IO) {
         dao.pruneAppUsageBefore(epochDay)
         dao.pruneHourlyBefore(epochDay)
+        dao.pruneHourlyAppBefore(epochDay)
+        dao.pruneHourlyUnlockBefore(epochDay)
         dao.pruneUnlockSummaryBefore(epochDay)
         dao.pruneCollectedBefore(epochDay)
     }
@@ -84,24 +88,34 @@ class ScreenTimeRepository(
         val appRows = dao.appUsageIn(startEpochDay, endEpochDay).groupBy { it.epochDay }
         val unlockRows = dao.unlockSummaryIn(startEpochDay, endEpochDay).associateBy { it.epochDay }
         val hourlyRows = dao.hourlyIn(startEpochDay, endEpochDay).groupBy { it.epochDay }
+        val hourlyAppRows = dao.hourlyAppIn(startEpochDay, endEpochDay).groupBy { it.epochDay }
+        val hourlyUnlockRows = dao.hourlyUnlockIn(startEpochDay, endEpochDay).groupBy { it.epochDay }
 
         val days = appRows.keys + unlockRows.keys + hourlyRows.keys
         return days.associateWith { epochDay ->
+            val hourlyByPackage = (hourlyAppRows[epochDay] ?: emptyList()).groupBy { it.packageName }
+
             val perApp = (appRows[epochDay] ?: emptyList())
-                .map {
+                .map { row ->
+                    val appHourlyMs = LongArray(24)
+                    hourlyByPackage[row.packageName]?.forEach { appHourlyMs[it.hour] = it.totalTimeMs }
                     AppUsageStat(
-                        packageName = it.packageName,
-                        totalTimeMs = it.totalTimeMs,
-                        sessionCount = it.sessionCount,
-                        longestSessionMs = it.longestSessionMs,
-                        firstUsedAtMs = it.firstUsedAtMs,
-                        lastUsedAtMs = it.lastUsedAtMs,
+                        packageName = row.packageName,
+                        totalTimeMs = row.totalTimeMs,
+                        sessionCount = row.sessionCount,
+                        longestSessionMs = row.longestSessionMs,
+                        firstUsedAtMs = row.firstUsedAtMs,
+                        lastUsedAtMs = row.lastUsedAtMs,
+                        hourlyMs = appHourlyMs,
                     )
                 }
                 .sortedByDescending { it.totalTimeMs }
 
             val hourlyMs = LongArray(24)
             (hourlyRows[epochDay] ?: emptyList()).forEach { hourlyMs[it.hour] = it.totalTimeMs }
+
+            val unlockHourly = IntArray(24)
+            (hourlyUnlockRows[epochDay] ?: emptyList()).forEach { unlockHourly[it.hour] = it.count }
 
             val unlock = unlockRows[epochDay]
 
@@ -113,6 +127,7 @@ class ScreenTimeRepository(
                 unlockCount = unlock?.unlockCount ?: 0,
                 firstUnlockAtMs = unlock?.firstUnlockAtMs,
                 lastUnlockAtMs = unlock?.lastUnlockAtMs,
+                unlockHourly = unlockHourly,
             )
         }
     }
@@ -129,10 +144,18 @@ class ScreenTimeRepository(
                 lastUsedAtMs = stat.lastUsedAtMs,
             )
         }
-        // LongArray has no mapIndexedNotNull (that's only defined for Iterable/Array<T>),
+        // LongArray/IntArray have no mapIndexedNotNull (only defined for Iterable/Array<T>),
         // so go through withIndex() first.
         val hourlyRows = bucket.hourlyMs.withIndex().mapNotNull { (hour, ms) ->
             if (ms > 0) HourlyUsageEntity(bucket.epochDay, hour, ms) else null
+        }
+        val hourlyAppRows = bucket.perApp.flatMap { stat ->
+            stat.hourlyMs.withIndex().mapNotNull { (hour, ms) ->
+                if (ms > 0) HourlyAppUsageEntity(bucket.epochDay, hour, stat.packageName, ms) else null
+            }
+        }
+        val hourlyUnlockRows = bucket.unlockHourly.withIndex().mapNotNull { (hour, count) ->
+            if (count > 0) HourlyUnlockEntity(bucket.epochDay, hour, count) else null
         }
         val unlockRow = DailyUnlockSummaryEntity(
             epochDay = bucket.epochDay,
@@ -140,7 +163,7 @@ class ScreenTimeRepository(
             firstUnlockAtMs = bucket.firstUnlockAtMs,
             lastUnlockAtMs = bucket.lastUnlockAtMs,
         )
-        dao.saveDay(bucket.epochDay, appRows, unlockRow, hourlyRows)
+        dao.saveDay(bucket.epochDay, appRows, unlockRow, hourlyRows, hourlyAppRows, hourlyUnlockRows)
     }
 
     private fun emptyDayBucket(epochDay: Long) = DayBucket(

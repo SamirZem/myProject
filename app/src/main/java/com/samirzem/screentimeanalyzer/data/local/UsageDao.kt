@@ -19,6 +19,12 @@ interface UsageDao {
     suspend fun insertHourly(rows: List<HourlyUsageEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertHourlyApp(rows: List<HourlyAppUsageEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertHourlyUnlock(rows: List<HourlyUnlockEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun markCollected(row: CollectedDayEntity)
 
     @Query("SELECT epochDay FROM collected_day WHERE epochDay BETWEEN :startEpochDay AND :endEpochDay")
@@ -33,16 +39,26 @@ interface UsageDao {
     @Query("SELECT * FROM hourly_usage WHERE epochDay BETWEEN :startEpochDay AND :endEpochDay")
     suspend fun hourlyIn(startEpochDay: Long, endEpochDay: Long): List<HourlyUsageEntity>
 
+    @Query("SELECT * FROM hourly_app_usage WHERE epochDay BETWEEN :startEpochDay AND :endEpochDay")
+    suspend fun hourlyAppIn(startEpochDay: Long, endEpochDay: Long): List<HourlyAppUsageEntity>
+
+    @Query("SELECT * FROM hourly_unlock WHERE epochDay BETWEEN :startEpochDay AND :endEpochDay")
+    suspend fun hourlyUnlockIn(startEpochDay: Long, endEpochDay: Long): List<HourlyUnlockEntity>
+
     @Transaction
     suspend fun saveDay(
         epochDay: Long,
         appUsage: List<DailyAppUsageEntity>,
         unlockSummary: DailyUnlockSummaryEntity,
         hourly: List<HourlyUsageEntity>,
+        hourlyApp: List<HourlyAppUsageEntity>,
+        hourlyUnlock: List<HourlyUnlockEntity>,
     ) {
         insertAppUsage(appUsage)
         insertUnlockSummary(unlockSummary)
         insertHourly(hourly)
+        insertHourlyApp(hourlyApp)
+        insertHourlyUnlock(hourlyUnlock)
         markCollected(CollectedDayEntity(epochDay))
     }
 
@@ -51,6 +67,12 @@ interface UsageDao {
 
     @Query("DELETE FROM hourly_usage WHERE epochDay < :beforeEpochDay")
     suspend fun pruneHourlyBefore(beforeEpochDay: Long)
+
+    @Query("DELETE FROM hourly_app_usage WHERE epochDay < :beforeEpochDay")
+    suspend fun pruneHourlyAppBefore(beforeEpochDay: Long)
+
+    @Query("DELETE FROM hourly_unlock WHERE epochDay < :beforeEpochDay")
+    suspend fun pruneHourlyUnlockBefore(beforeEpochDay: Long)
 
     @Query("DELETE FROM daily_unlock_summary WHERE epochDay < :beforeEpochDay")
     suspend fun pruneUnlockSummaryBefore(beforeEpochDay: Long)

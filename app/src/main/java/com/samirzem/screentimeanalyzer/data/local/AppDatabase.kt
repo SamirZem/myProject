@@ -10,9 +10,11 @@ import androidx.room.RoomDatabase
         DailyAppUsageEntity::class,
         DailyUnlockSummaryEntity::class,
         HourlyUsageEntity::class,
+        HourlyAppUsageEntity::class,
+        HourlyUnlockEntity::class,
         CollectedDayEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -29,7 +31,13 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "screen_time.db",
-                ).build().also { instance = it }
+                )
+                    // This is just a rebuildable cache of what UsageAnalyticsEngine can
+                    // recompute from UsageStatsManager, so a schema bump can safely wipe
+                    // and start fresh instead of carrying a real migration.
+                    .fallbackToDestructiveMigration()
+                    .build()
+                    .also { instance = it }
             }
     }
 }

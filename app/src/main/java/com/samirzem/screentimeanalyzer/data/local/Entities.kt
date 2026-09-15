@@ -33,6 +33,22 @@ data class HourlyUsageEntity(
     val totalTimeMs: Long,
 )
 
+/** Per-app breakdown of [HourlyUsageEntity], used to answer "what was I using at 9pm". */
+@Entity(tableName = "hourly_app_usage", primaryKeys = ["epochDay", "hour", "packageName"])
+data class HourlyAppUsageEntity(
+    val epochDay: Long,
+    val hour: Int,
+    val packageName: String,
+    val totalTimeMs: Long,
+)
+
+@Entity(tableName = "hourly_unlock", primaryKeys = ["epochDay", "hour"])
+data class HourlyUnlockEntity(
+    val epochDay: Long,
+    val hour: Int,
+    val count: Int,
+)
+
 /** Marks an epoch day as fully collected, so we know the cache for it is complete. */
 @Entity(tableName = "collected_day", primaryKeys = ["epochDay"])
 data class CollectedDayEntity(

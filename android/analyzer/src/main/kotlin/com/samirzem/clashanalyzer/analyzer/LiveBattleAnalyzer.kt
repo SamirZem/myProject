@@ -1,6 +1,7 @@
 package com.samirzem.clashanalyzer.analyzer
 
 import com.samirzem.clashanalyzer.analyzer.model.AnalysisResult
+import com.samirzem.clashanalyzer.analyzer.model.CardTag
 import com.samirzem.clashanalyzer.analyzer.model.GameEvent
 import com.samirzem.clashanalyzer.analyzer.model.Insight
 import com.samirzem.clashanalyzer.analyzer.model.Severity
@@ -31,22 +32,27 @@ object LiveBattleAnalyzer {
     private const val ELIXIR_WASTE_MIN_DURATION_MS = 4_000L
     private const val SINGLE_ELIXIR_REGEN_PERIOD_MS = 2_800.0
     private const val DOUBLE_ELIXIR_REGEN_PERIOD_MS = 1_400.0
+    private const val MIN_PLAYS_FOR_DIVERSITY_CHECK = 6
 
-    fun analyze(samples: List<TelemetrySample>, doubleElixirStartMs: Long = 120_000L): AnalysisResult {
+    fun analyze(samples: List<TelemetrySample>, doubleElixirStartMs: Long = 120_000L, myDeck: List<String> = emptyList()): AnalysisResult {
         val mistakes = mutableListOf<Insight>()
         val goodMoves = mutableListOf<Insight>()
         val tips = mutableListOf<Insight>()
 
         tips += Insight(
             title = "Analyse basée sur la capture d'écran",
-            detail = "L'élixir et les PV des tours sont lus automatiquement sur l'image ; les valeurs peuvent être légèrement approximatives selon la calibration.",
+            detail = "L'élixir, les PV des tours et tes cartes jouées sont lus automatiquement sur l'image ; les cartes et le deck de l'adversaire ne sont jamais visibles à l'écran, donc hors de portée de cette analyse.",
             severity = Severity.INFO,
         )
+
+        // Deck-composition feedback only needs your own deck, not the match telemetry, so it
+        // still runs even when too little was captured for the timing-based heuristics below.
+        analyzeDeckComposition(myDeck, tips)
 
         if (samples.size < 2) {
             return AnalysisResult(
                 score = 50,
-                summary = "Pas assez de données capturées pour analyser cette partie.",
+                summary = "Pas assez de données capturées pour analyser le déroulé de cette partie.",
                 mistakes = mistakes,
                 goodMoves = goodMoves,
                 tips = tips,
@@ -64,6 +70,8 @@ object LiveBattleAnalyzer {
         analyzePushes(myCardPlays, myTowerDamaged, oppTowerDamaged, mistakes, goodMoves)
         analyzeMissedDefense(myTowerDamaged, myCardPlays, samples, mistakes)
         analyzeElixirManagement(samples, doubleElixirStartMs, mistakes, goodMoves, tips)
+        analyzeCardDiversity(myCardPlays, myDeck, mistakes, goodMoves, tips)
+        analyzeDamageBalance(myTowerDamaged, oppTowerDamaged, goodMoves, mistakes, tips)
 
         val crownsForMe = oppTowerDestroyed.size
         val crownsForOpp = myTowerDestroyed.size
@@ -78,6 +86,107 @@ object LiveBattleAnalyzer {
             tips = tips,
             fromLiveCapture = true,
         )
+    }
+
+    /** Deck-build feedback based only on your own 8 cards — the opponent's deck is never visible on screen in live capture, so this can't be matchup-specific the way [BattleAnalyzer]'s post-match version is. */
+    private fun analyzeDeckComposition(myDeck: List<String>, tips: MutableList<Insight>) {
+        if (myDeck.size < 8) return
+        val cards = myDeck.map { CardDatabase[it] }
+
+        if (cards.none { CardTag.WIN_CONDITION in it.tags }) {
+            tips += Insight(
+                title = "Pas de condition de victoire claire",
+                detail = "Aucune carte de ton deck n'est taguée comme condition de victoire dédiée — vérifie que ton deck a un plan clair pour faire des dégâts de tour.",
+                severity = Severity.INFO,
+            )
+        }
+        if (cards.none { CardTag.SMALL_SPELL in it.tags }) {
+            tips += Insight(
+                title = "Pas de petit sort dans le deck",
+                detail = "Sans petit sort (Zap, Log, Snowball...), les cartes de swarm adverses peuvent être coûteuses à gérer proprement.",
+                severity = Severity.INFO,
+            )
+        }
+        if (cards.none { CardTag.ANTI_AIR in it.tags }) {
+            tips += Insight(
+                title = "Pas de défense anti-air",
+                detail = "Aucune carte de ton deck ne cible l'air — un deck aérien adverse (Lava Hound, Balloon...) pourrait être difficile à arrêter.",
+                severity = Severity.INFO,
+            )
+        }
+        if (cards.none { CardTag.BUILDING_DEFENSE in it.tags }) {
+            tips += Insight(
+                title = "Pas de bâtiment défensif",
+                detail = "Un bâtiment (Cannon, Tesla, Inferno Tower...) aide à absorber l'aggro sans perdre d'élixir en trade négatif face à un gros tank.",
+                severity = Severity.INFO,
+            )
+        }
+        val avgElixir = cards.map { it.elixirCost }.average()
+        when {
+            avgElixir >= 4.3 -> tips += Insight(
+                title = "Deck plutôt lourd",
+                detail = "Coût d'élixir moyen de ${"%.1f".format(avgElixir)} : attends-toi à un rythme de jeu plus lent, avec moins de marge pour répondre vite à une poussée rapide.",
+                severity = Severity.INFO,
+            )
+            avgElixir <= 3.2 -> tips += Insight(
+                title = "Deck cycle rapide",
+                detail = "Coût d'élixir moyen de ${"%.1f".format(avgElixir)} : tu peux répondre vite, mais chaque carte fait individuellement moins de dégâts — la régularité des poussées compte plus que leur taille.",
+                severity = Severity.INFO,
+            )
+        }
+    }
+
+    /** Flags over-reliance on a small subset of the deck, or rewards using most of it. */
+    private fun analyzeCardDiversity(
+        myCardPlays: List<GameEvent.CardPlayed>,
+        myDeck: List<String>,
+        mistakes: MutableList<Insight>,
+        goodMoves: MutableList<Insight>,
+        tips: MutableList<Insight>,
+    ) {
+        if (myCardPlays.size < MIN_PLAYS_FOR_DIVERSITY_CHECK) return
+        val distinctCards = myCardPlays.map { it.cardName }.distinct()
+        val deckSize = myDeck.size.takeIf { it >= 8 } ?: 8
+
+        when {
+            distinctCards.size <= 2 -> mistakes += Insight(
+                title = "Rotation de deck très limitée",
+                detail = "Seulement ${distinctCards.size} carte(s) différente(s) jouée(s) (${distinctCards.joinToString(", ")}) sur ${myCardPlays.size} coups : le reste du deck n'a presque pas servi.",
+                severity = Severity.MINOR,
+            )
+            distinctCards.size >= (deckSize - 1) -> goodMoves += Insight(
+                title = "Bonne rotation du deck",
+                detail = "${distinctCards.size} cartes différentes jouées sur les ${deckSize} du deck : bonne utilisation de tout ton arsenal plutôt que de répéter les mêmes cartes.",
+                severity = Severity.GOOD,
+            )
+            else -> tips += Insight(
+                title = "Rotation du deck",
+                detail = "${distinctCards.size} cartes différentes jouées sur les ${deckSize} du deck.",
+                severity = Severity.INFO,
+            )
+        }
+    }
+
+    /** Always-present summary of total tower damage dealt vs taken, independent of any single flagged mistake. */
+    private fun analyzeDamageBalance(
+        myTowerDamaged: List<GameEvent.TowerDamaged>,
+        oppTowerDamaged: List<GameEvent.TowerDamaged>,
+        goodMoves: MutableList<Insight>,
+        mistakes: MutableList<Insight>,
+        tips: MutableList<Insight>,
+    ) {
+        val dealt = oppTowerDamaged.sumOf { it.hpFractionLost }
+        val taken = myTowerDamaged.sumOf { it.hpFractionLost }
+        if (dealt < 0.01 && taken < 0.01) return
+
+        val dealtPct = (dealt * 100).roundToInt()
+        val takenPct = (taken * 100).roundToInt()
+        val detail = "Sur l'ensemble de la partie : environ $dealtPct% de PV de tour infligés à l'adversaire, contre $takenPct% subis sur tes propres tours."
+        when {
+            dealt >= taken * 1.5 && dealt > 0.05 -> goodMoves += Insight("Bilan de pression favorable", detail, Severity.GOOD)
+            taken >= dealt * 1.5 && taken > 0.05 -> mistakes += Insight("Bilan de pression défavorable", detail, Severity.MINOR)
+            else -> tips += Insight("Bilan de pression équilibré", detail, Severity.INFO)
+        }
     }
 
     /** Groups my card plays into "pushes" (plays close together in time) and checks how each one resolved. */

@@ -118,4 +118,71 @@ class LiveBattleAnalyzerTest {
         val spent = LiveBattleAnalyzer.estimateElixirSpent(previousElixir = 5.0, currentElixir = 5.0, dtMs = 2800L, isDoubleElixir = false)
         assertEquals(1.0, spent, 0.01)
     }
+
+    // A deck with none of the win-condition / small-spell / anti-air / building-defense tags,
+    // used to test deck-composition feedback in isolation from the timing-based heuristics.
+    private val gapDeck = listOf("Knight", "Valkyrie", "Prince", "Bandit", "Royal Ghost", "Lumberjack", "Dark Prince", "Skeleton King")
+
+    @Test
+    fun `deck composition tips are produced even without enough capture data`() {
+        val result = LiveBattleAnalyzer.analyze(emptyList(), doubleElixirStartMs = 120_000L, myDeck = gapDeck)
+
+        assertTrue(result.tips.any { it.title.contains("condition de victoire") })
+        assertTrue(result.tips.any { it.title.contains("petit sort") })
+        assertTrue(result.tips.any { it.title.contains("anti-air") })
+        assertTrue(result.tips.any { it.title.contains("bâtiment défensif") })
+    }
+
+    @Test
+    fun `repeatedly playing only two cards is flagged as low deck rotation`() {
+        val samples = timeline(untilMs = 20000).map { t ->
+            val useFirst = (t / 1000) % 2 == 0L
+            TelemetrySample(
+                timestampMs = t,
+                myElixir = 5.0,
+                myTowerHpFractions = listOf(1.0),
+                oppTowerHpFractions = listOf(1.0),
+                handCards = listOf(if (useFirst) "Knight" else "Valkyrie", "Cannon", "Fireball", "Zap"),
+            )
+        }
+
+        val result = LiveBattleAnalyzer.analyze(samples, doubleElixirStartMs = 120_000L)
+
+        assertTrue(result.mistakes.any { it.title.contains("Rotation de deck") })
+    }
+
+    @Test
+    fun `using most of the deck across a match is rewarded as a good move`() {
+        val samples = timeline(untilMs = 20000).map { t ->
+            val idx = ((t / 1000) % gapDeck.size).toInt()
+            TelemetrySample(
+                timestampMs = t,
+                myElixir = 5.0,
+                myTowerHpFractions = listOf(1.0),
+                oppTowerHpFractions = listOf(1.0),
+                handCards = listOf(gapDeck[idx], "Cannon", "Fireball", "Zap"),
+            )
+        }
+
+        val result = LiveBattleAnalyzer.analyze(samples, doubleElixirStartMs = 120_000L, myDeck = gapDeck)
+
+        assertTrue(result.goodMoves.any { it.title.contains("Bonne rotation") })
+    }
+
+    @Test
+    fun `dealing much more tower damage than taken is a favorable pressure balance`() {
+        val samples = timeline(untilMs = 8000).map { t ->
+            TelemetrySample(
+                timestampMs = t,
+                myElixir = 5.0,
+                myTowerHpFractions = listOf(1.0),
+                oppTowerHpFractions = listOf(if (t < 6000) 1.0 else 0.7),
+                handCards = listOf("Musketeer", "Cannon", "Fireball", "Zap"),
+            )
+        }
+
+        val result = LiveBattleAnalyzer.analyze(samples, doubleElixirStartMs = 120_000L)
+
+        assertTrue(result.goodMoves.any { it.title.contains("pression favorable") })
+    }
 }

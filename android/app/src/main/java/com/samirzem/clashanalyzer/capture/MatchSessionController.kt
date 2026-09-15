@@ -32,6 +32,7 @@ class MatchSessionController(
     private var samplingJob: Job? = null
     private val samples = mutableListOf<TelemetrySample>()
     private var startTimeMs = 0L
+    private var currentDeck: List<String> = emptyList()
 
     private val _isRunning = MutableStateFlow(false)
     val isRunning = _isRunning.asStateFlow()
@@ -48,10 +49,10 @@ class MatchSessionController(
 
         samplingJob = scope.launch {
             val profile = calibrationStore.profile.first()
-            val deck = settings.currentDeck.first()
+            currentDeck = settings.currentDeck.first()
             while (isActive && _isRunning.value) {
                 CaptureForegroundService.latestFrame.value?.let { frame ->
-                    samples += buildSample(frame, profile, deck)
+                    samples += buildSample(frame, profile, currentDeck)
                     _sampleCount.value = samples.size
                 }
                 delay(sampleIntervalMs)
@@ -82,7 +83,7 @@ class MatchSessionController(
         _isRunning.value = false
         samplingJob?.cancelAndJoin()
         samplingJob = null
-        val result = if (samples.size >= 2) repository.saveLiveCaptureResult(samples.toList(), opponentName) else null
+        val result = if (samples.size >= 2) repository.saveLiveCaptureResult(samples.toList(), opponentName, currentDeck) else null
         samples.clear()
         return result
     }

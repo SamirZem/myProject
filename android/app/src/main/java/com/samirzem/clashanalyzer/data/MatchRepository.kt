@@ -23,8 +23,8 @@ class MatchRepository(
     suspend fun getMatch(id: Long): MatchAnalysisEntity? = dao.getById(id)
 
     /** Runs the live, screen-capture-based analysis and persists the result. Returns the new row id. */
-    suspend fun saveLiveCaptureResult(samples: List<TelemetrySample>, opponentName: String?): Long {
-        val result = LiveBattleAnalyzer.analyze(samples)
+    suspend fun saveLiveCaptureResult(samples: List<TelemetrySample>, opponentName: String?, myDeck: List<String> = emptyList()): Long {
+        val result = LiveBattleAnalyzer.analyze(samples, myDeck = myDeck)
         return dao.insert(MatchAnalysisMapper.toEntity(result, opponentName))
     }
 

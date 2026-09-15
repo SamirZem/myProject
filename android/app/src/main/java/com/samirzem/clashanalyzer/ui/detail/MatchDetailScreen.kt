@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.samirzem.clashanalyzer.analyzer.model.AnalysisResult
 import com.samirzem.clashanalyzer.analyzer.model.Insight
 import com.samirzem.clashanalyzer.analyzer.model.Severity
+import com.samirzem.clashanalyzer.data.local.MatchAnalysisMapper
 import com.samirzem.clashanalyzer.di.ServiceLocator
 import com.samirzem.clashanalyzer.ui.theme.GoodColor
 import com.samirzem.clashanalyzer.ui.theme.MajorColor
@@ -34,7 +35,7 @@ fun MatchDetailScreen(matchId: Long) {
     var result by remember { mutableStateOf<AnalysisResult?>(null) }
 
     LaunchedEffect(matchId) {
-        result = ServiceLocator.matchRepository.getMatch(matchId)?.toAnalysisResult()
+        result = ServiceLocator.matchRepository.getMatch(matchId)?.let { MatchAnalysisMapper.toAnalysisResult(it) }
     }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Détail de la partie") }) }) { padding ->

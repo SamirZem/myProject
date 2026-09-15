@@ -6,6 +6,7 @@ import com.samirzem.clashanalyzer.analyzer.model.AnalysisResult
 import com.samirzem.clashanalyzer.analyzer.model.TelemetrySample
 import com.samirzem.clashanalyzer.data.local.MatchAnalysisDao
 import com.samirzem.clashanalyzer.data.local.MatchAnalysisEntity
+import com.samirzem.clashanalyzer.data.local.MatchAnalysisMapper
 import com.samirzem.clashanalyzer.data.remote.BackendApi
 import com.samirzem.clashanalyzer.data.remote.BattleMapper
 import kotlinx.coroutines.flow.Flow
@@ -24,7 +25,7 @@ class MatchRepository(
     /** Runs the live, screen-capture-based analysis and persists the result. Returns the new row id. */
     suspend fun saveLiveCaptureResult(samples: List<TelemetrySample>, opponentName: String?): Long {
         val result = LiveBattleAnalyzer.analyze(samples)
-        return dao.insert(MatchAnalysisEntity.from(result, opponentName))
+        return dao.insert(MatchAnalysisMapper.toEntity(result, opponentName))
     }
 
     /**
@@ -39,7 +40,7 @@ class MatchRepository(
         val latest = battleLog.firstOrNull() ?: error("Aucune partie récente trouvée pour ce joueur.")
         val battleRecord = BattleMapper.toBattleRecord(latest, tag) ?: error("Impossible d'interpréter la réponse de l'API pour cette partie.")
         val result: AnalysisResult = BattleAnalyzer.analyze(battleRecord)
-        dao.insert(MatchAnalysisEntity.from(result, battleRecord.opponent.name))
+        dao.insert(MatchAnalysisMapper.toEntity(result, battleRecord.opponent.name))
     }
 
     suspend fun delete(id: Long) = dao.delete(id)

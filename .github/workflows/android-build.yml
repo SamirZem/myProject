@@ -11,6 +11,9 @@ on:
       - "android/**"
   workflow_dispatch: {}
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -61,3 +64,20 @@ jobs:
           name: clash-analyzer-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      - name: Publish APK to apk-drop branch
+        # actions/upload-artifact publishes to Azure Blob storage, which isn't reachable from
+        # every environment that develops this repo. Also push the APK to a throwaway branch
+        # via plain git, so it can be retrieved with `git fetch` instead.
+        working-directory: .
+        run: |
+          git config user.name "clash-analyzer-ci"
+          git config user.email "ci@users.noreply.github.com"
+          APK_PATH=$(find android/app/build/outputs/apk/debug -name '*.apk' | head -n 1)
+          git checkout --orphan apk-drop
+          git rm -rf --cached . > /dev/null
+          mkdir -p artifacts
+          cp "$APK_PATH" artifacts/clash-analyzer-debug.apk
+          git add artifacts/clash-analyzer-debug.apk
+          git commit -m "APK build from ${{ github.sha }}"
+          git push origin HEAD:apk-drop --force

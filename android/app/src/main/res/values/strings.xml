@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Clash Analyzer</string>
+    <string name="capture_notification_channel">Analyse de partie en cours</string>
+    <string name="capture_notification_title">Clash Analyzer</string>
+    <string name="capture_notification_text">Capture et analyse de la partie en cours…</string>
+</resources>

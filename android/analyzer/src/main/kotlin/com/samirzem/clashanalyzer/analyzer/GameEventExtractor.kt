@@ -17,12 +17,25 @@ object GameEventExtractor {
     /** A hand-slot reading must repeat this many consecutive samples before it's trusted. */
     private const val STABILITY_RUN = 2
 
+    /** How many recent samples feed the rolling "quiet board" baseline for opponent activity. */
+    private const val ACTIVITY_BASELINE_WINDOW = 6
+
+    /** A sample must exceed its rolling baseline by this much to count as a deploy spike. */
+    private const val ACTIVITY_SPIKE_DELTA = 0.15
+
+    /** Floor below which activity is never flagged, even against a near-zero baseline (sensor noise). */
+    private const val ACTIVITY_MIN_ABSOLUTE = 0.08
+
+    /** Once a push is flagged, further spikes are treated as the same push for this long. */
+    private const val ACTIVITY_COOLDOWN_MS = 1_500L
+
     fun extract(samples: List<TelemetrySample>): List<GameEvent> {
         if (samples.isEmpty()) return emptyList()
         val events = mutableListOf<GameEvent>()
         events += extractCardPlays(samples)
         events += extractTowerEvents(samples, Side.ME) { it.myTowerHpFractions }
         events += extractTowerEvents(samples, Side.OPPONENT) { it.oppTowerHpFractions }
+        events += extractOpponentPushes(samples)
         return events.sortedBy { it.timestampMs }
     }
 
@@ -90,6 +103,31 @@ object GameEventExtractor {
                 }
                 previousHp = hp
             }
+        }
+        return events
+    }
+
+    /**
+     * Flags moments where [TelemetrySample.oppBoardActivity] spikes above its own recent rolling
+     * baseline — i.e. "something just appeared/moved on the opponent's side" — without any claim
+     * about what it was. A quiet board naturally drifts (camera/UI noise), so the trigger is
+     * relative to a short local baseline rather than a fixed absolute threshold; a cooldown
+     * collapses a single deploy's several noisy samples into one event.
+     */
+    private fun extractOpponentPushes(samples: List<TelemetrySample>): List<GameEvent.OpponentPush> {
+        val events = mutableListOf<GameEvent.OpponentPush>()
+        val recentActivity = ArrayDeque<Double>()
+        var lastEventMs: Long? = null
+        for (sample in samples) {
+            val activity = sample.oppBoardActivity
+            val baseline = if (recentActivity.isEmpty()) 0.0 else recentActivity.average()
+            val inCooldown = lastEventMs != null && sample.timestampMs - lastEventMs!! < ACTIVITY_COOLDOWN_MS
+            if (!inCooldown && activity >= ACTIVITY_MIN_ABSOLUTE && activity >= baseline + ACTIVITY_SPIKE_DELTA) {
+                events += GameEvent.OpponentPush(sample.timestampMs, activity)
+                lastEventMs = sample.timestampMs
+            }
+            recentActivity.addLast(activity)
+            if (recentActivity.size > ACTIVITY_BASELINE_WINDOW) recentActivity.removeFirst()
         }
         return events
     }

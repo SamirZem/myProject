@@ -62,6 +62,9 @@ private fun regions(): List<Region> = listOf(
     Region("Tour Roi (adversaire)", { it.oppTowerRects[0] }, { p, r -> p.copy(oppTowerRects = p.oppTowerRects.toMutableList().also { it[0] = r }) }),
     Region("Tour Princesse G (adv.)", { it.oppTowerRects[1] }, { p, r -> p.copy(oppTowerRects = p.oppTowerRects.toMutableList().also { it[1] = r }) }),
     Region("Tour Princesse D (adv.)", { it.oppTowerRects[2] }, { p, r -> p.copy(oppTowerRects = p.oppTowerRects.toMutableList().also { it[2] = r }) }),
+    // Not a color-calibrated zone like the others: only its position matters, for detecting
+    // motion (an opponent deploy) rather than reading a fixed color like the bars above.
+    Region("Zone plateau adverse", { it.oppBoardZoneRect }, { p, r -> p.copy(oppBoardZoneRect = r) }),
 )
 
 @Composable

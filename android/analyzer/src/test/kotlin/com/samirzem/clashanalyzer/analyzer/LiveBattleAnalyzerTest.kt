@@ -33,6 +33,68 @@ class LiveBattleAnalyzerTest {
     }
 
     @Test
+    fun `event extractor flags a motion spike on the opponent board as an opponent push`() {
+        val samples = timeline(untilMs = 6000).map { t ->
+            TelemetrySample(
+                timestampMs = t,
+                myElixir = 5.0,
+                myTowerHpFractions = listOf(1.0),
+                oppTowerHpFractions = listOf(1.0),
+                handCards = listOf("Musketeer", "Cannon", "Fireball", "Zap"),
+                oppBoardActivity = if (t == 3000L) 0.6 else 0.02,
+            )
+        }
+
+        val events = GameEventExtractor.extract(samples)
+        val pushes = events.filterIsInstance<GameEvent.OpponentPush>()
+
+        assertEquals(1, pushes.size)
+        assertEquals(3000L, pushes.first().timestampMs)
+    }
+
+    @Test
+    fun `fast reactions to detected opponent pushes are rewarded as good reflexes`() {
+        val samples = timeline(untilMs = 12000).map { t ->
+            val slot0 = when {
+                t < 2500 -> "Musketeer"
+                t < 6500 -> "Wizard"
+                t < 10500 -> "Skeletons"
+                else -> "Golem"
+            }
+            TelemetrySample(
+                timestampMs = t,
+                myElixir = 5.0,
+                myTowerHpFractions = listOf(1.0),
+                oppTowerHpFractions = listOf(1.0),
+                handCards = listOf(slot0, "Cannon", "Fireball", "Zap"),
+                oppBoardActivity = if (t == 2000L || t == 6000L || t == 10000L) 0.6 else 0.02,
+            )
+        }
+
+        val result = LiveBattleAnalyzer.analyze(samples, doubleElixirStartMs = 120_000L)
+
+        assertTrue(result.goodMoves.any { it.title.contains("Bons réflexes") })
+    }
+
+    @Test
+    fun `detected opponent pushes with no card response are flagged as a mistake`() {
+        val samples = timeline(untilMs = 12000).map { t ->
+            TelemetrySample(
+                timestampMs = t,
+                myElixir = 5.0,
+                myTowerHpFractions = listOf(1.0),
+                oppTowerHpFractions = listOf(1.0),
+                handCards = listOf("Musketeer", "Cannon", "Fireball", "Zap"),
+                oppBoardActivity = if (t == 2000L || t == 6000L || t == 10000L) 0.6 else 0.02,
+            )
+        }
+
+        val result = LiveBattleAnalyzer.analyze(samples, doubleElixirStartMs = 120_000L)
+
+        assertTrue(result.mistakes.any { it.title.contains("sans réponse") })
+    }
+
+    @Test
     fun `overcommitting a big push that gets punished is flagged as a mistake`() {
         val samples = timeline(untilMs = 10000).map { t ->
             TelemetrySample(

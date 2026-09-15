@@ -34,6 +34,10 @@ class MatchSessionController(
     private var startTimeMs = 0L
     private var currentDeck: List<String> = emptyList()
 
+    /** The previous sampled frame, kept only long enough to diff against the next one for opponent-board motion detection — never persisted. */
+    private var previousFrame: Bitmap? = null
+    private val oppBoardActivityTolerance = 40
+
     private val _isRunning = MutableStateFlow(false)
     val isRunning = _isRunning.asStateFlow()
 
@@ -44,6 +48,7 @@ class MatchSessionController(
         if (_isRunning.value) return
         samples.clear()
         _sampleCount.value = 0
+        previousFrame = null
         startTimeMs = System.currentTimeMillis()
         _isRunning.value = true
 
@@ -53,6 +58,7 @@ class MatchSessionController(
             while (isActive && _isRunning.value) {
                 CaptureForegroundService.latestFrame.value?.let { frame ->
                     samples += buildSample(frame, profile, currentDeck)
+                    previousFrame = frame
                     _sampleCount.value = samples.size
                 }
                 delay(sampleIntervalMs)
@@ -65,6 +71,9 @@ class MatchSessionController(
             val crop = FrameAnalyzer.cropHandSlot(frame, rect)
             templateStore.match(crop, deck)
         }
+        val oppBoardActivity = previousFrame?.let {
+            FrameAnalyzer.computeChangedFraction(it, frame, profile.oppBoardZoneRect, oppBoardActivityTolerance)
+        } ?: 0.0
         return TelemetrySample(
             timestampMs = System.currentTimeMillis() - startTimeMs,
             myElixir = FrameAnalyzer.readElixir(frame, profile.myElixirBarRect, profile),
@@ -75,6 +84,7 @@ class MatchSessionController(
                 FrameAnalyzer.readTowerHpFraction(frame, it, profile.oppTowerHealthyColor, profile.towerBackgroundColor)
             },
             handCards = handCards,
+            oppBoardActivity = oppBoardActivity,
         )
     }
 
@@ -94,6 +104,7 @@ class MatchSessionController(
         samplingJob?.cancel()
         samplingJob = null
         samples.clear()
+        previousFrame = null
         _sampleCount.value = 0
     }
 }

@@ -22,7 +22,9 @@ Deux sources, complémentaires :
    toutes les ~500 ms et en déduit l'élixir des deux joueurs, les PV des tours et les cartes que
    tu joues. À partir de ça elle détecte des trades d'élixir positifs/négatifs, les
    sur-investissements punis, les défenses manquées alors que tu avais de l'élixir disponible, et
-   le gaspillage d'élixir en double élixir.
+   le gaspillage d'élixir en double élixir. Elle détecte aussi, par différence d'image (pas de
+   reconnaissance de carte), *quand* l'adversaire déploie quelque chose sur son terrain — jamais
+   *quoi* — pour mesurer ton temps de réaction aux poussées adverses.
 2. **API officielle** (recoupement) : en complément, l'app peut aller chercher ta dernière partie
    sur l'API officielle (couronnes, PV de tours restants, decks) via le serveur relais, pour une
    analyse de deck/résultat plus posée et une vérification du score.

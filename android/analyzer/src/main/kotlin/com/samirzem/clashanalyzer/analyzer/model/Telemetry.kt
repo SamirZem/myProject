@@ -21,6 +21,14 @@ data class TelemetrySample(
     val oppTowerHpFractions: List<Double>,
     /** Card name recognized in each of the 4 visible hand slots, null if unrecognized/empty. */
     val handCards: List<String?>,
+    /**
+     * 0..1 fraction of sampled points in the opponent's board zone that changed noticeably since
+     * the previous frame (frame-differencing motion signal). This doesn't identify *what* the
+     * opponent deployed, only *that* something moved/appeared on their side of the board — enough
+     * to flag "opponent is pushing" without pretending to recognize their cards. Defaults to 0.0
+     * so existing call sites that don't care about this signal are unaffected.
+     */
+    val oppBoardActivity: Double = 0.0,
 )
 
 sealed class GameEvent {
@@ -44,6 +52,16 @@ sealed class GameEvent {
         override val timestampMs: Long,
         val side: Side,
         val towerIndex: Int,
+    ) : GameEvent()
+
+    /**
+     * Detected via [oppBoardActivity] spiking above its rolling baseline: the opponent deployed
+     * something (possibly several things at once). `intensity` is the peak activity fraction
+     * during the spike, useful for ranking "big push" vs. a single small troop.
+     */
+    data class OpponentPush(
+        override val timestampMs: Long,
+        val intensity: Double,
     ) : GameEvent()
 }
 

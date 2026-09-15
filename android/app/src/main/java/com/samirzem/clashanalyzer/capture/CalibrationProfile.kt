@@ -31,6 +31,12 @@ data class CalibrationProfile(
     /** [king, left princess, right princess] health-bar rectangles, my side. */
     val myTowerRects: List<NormalizedRect>,
     val oppTowerRects: List<NormalizedRect>,
+    /**
+     * The opponent's half of the arena (between their towers and the river), used only for
+     * frame-differencing motion detection — flagging *that* something was deployed there, never
+     * *what*. There's nothing to color-calibrate for this one, just the rectangle itself.
+     */
+    val oppBoardZoneRect: NormalizedRect = NormalizedRect(0.10f, 0.22f, 0.90f, 0.44f),
     /** Color sampled from a full elixir bar segment. */
     val elixirFilledColor: Int,
     /** Color sampled from an empty/background elixir bar segment. */

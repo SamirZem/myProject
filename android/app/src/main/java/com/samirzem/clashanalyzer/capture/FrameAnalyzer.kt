@@ -15,6 +15,9 @@ object FrameAnalyzer {
 
     private const val COLOR_TOLERANCE = 60
 
+    /** Points per side of the grid sampled by [computeChangedFraction] (64 sample points total). */
+    private const val MOTION_GRID_SIZE = 8
+
     fun toPixelRect(bitmap: Bitmap, rect: NormalizedRect): Rect {
         val left = (rect.left * bitmap.width).toInt().coerceIn(0, bitmap.width - 1)
         val top = (rect.top * bitmap.height).toInt().coerceIn(0, bitmap.height - 1)
@@ -74,6 +77,34 @@ object FrameAnalyzer {
         val x = (xFraction * bitmap.width).toInt().coerceIn(0, bitmap.width - 1)
         val y = (yFraction * bitmap.height).toInt().coerceIn(0, bitmap.height - 1)
         return bitmap.getPixel(x, y)
+    }
+
+    /**
+     * Frame-differencing motion signal, no card recognition involved: samples a fixed grid of
+     * points inside [rect] in both frames and returns the fraction of points whose color moved by
+     * more than [tolerance] between [prev] and [curr]. Used to detect *that* the opponent deployed
+     * something in their board zone, never *what* — that's genuinely unrecognizable from pixels
+     * alone, but "the area just changed a lot" is.
+     */
+    fun computeChangedFraction(prev: Bitmap, curr: Bitmap, rect: NormalizedRect, tolerance: Int): Double {
+        val prevRect = toPixelRect(prev, rect)
+        val currRect = toPixelRect(curr, rect)
+        val toleranceSq = tolerance * tolerance
+        var changed = 0
+        var total = 0
+        for (i in 0 until MOTION_GRID_SIZE) {
+            for (j in 0 until MOTION_GRID_SIZE) {
+                val fx = (i + 0.5f) / MOTION_GRID_SIZE
+                val fy = (j + 0.5f) / MOTION_GRID_SIZE
+                val px = (prevRect.left + fx * prevRect.width()).toInt().coerceIn(0, prev.width - 1)
+                val py = (prevRect.top + fy * prevRect.height()).toInt().coerceIn(0, prev.height - 1)
+                val cx = (currRect.left + fx * currRect.width()).toInt().coerceIn(0, curr.width - 1)
+                val cy = (currRect.top + fy * currRect.height()).toInt().coerceIn(0, curr.height - 1)
+                if (colorDistance(prev.getPixel(px, py), curr.getPixel(cx, cy)) > toleranceSq) changed++
+                total++
+            }
+        }
+        return if (total == 0) 0.0 else changed.toDouble() / total
     }
 
     /** Clamps a rect so it always has at least a 1px extent, used when the user drags handles past each other. */

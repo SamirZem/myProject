@@ -33,6 +33,10 @@ object LiveBattleAnalyzer {
     private const val SINGLE_ELIXIR_REGEN_PERIOD_MS = 2_800.0
     private const val DOUBLE_ELIXIR_REGEN_PERIOD_MS = 1_400.0
     private const val MIN_PLAYS_FOR_DIVERSITY_CHECK = 6
+    private const val MIN_PUSHES_FOR_REACTION_CHECK = 3
+    private const val PUSH_REACTION_WINDOW_MS = 3_000L
+    private const val FAST_REACTION_THRESHOLD_MS = 1_000L
+    private const val SLOW_REACTION_THRESHOLD_MS = 2_000L
 
     fun analyze(samples: List<TelemetrySample>, doubleElixirStartMs: Long = 120_000L, myDeck: List<String> = emptyList()): AnalysisResult {
         val mistakes = mutableListOf<Insight>()
@@ -67,11 +71,14 @@ object LiveBattleAnalyzer {
         val myTowerDestroyed = events.filterIsInstance<GameEvent.TowerDestroyed>().filter { it.side == Side.ME }
         val oppTowerDestroyed = events.filterIsInstance<GameEvent.TowerDestroyed>().filter { it.side == Side.OPPONENT }
 
+        val oppPushes = events.filterIsInstance<GameEvent.OpponentPush>()
+
         analyzePushes(myCardPlays, myTowerDamaged, oppTowerDamaged, mistakes, goodMoves)
         analyzeMissedDefense(myTowerDamaged, myCardPlays, samples, mistakes)
         analyzeElixirManagement(samples, doubleElixirStartMs, mistakes, goodMoves, tips)
         analyzeCardDiversity(myCardPlays, myDeck, mistakes, goodMoves, tips)
         analyzeDamageBalance(myTowerDamaged, oppTowerDamaged, goodMoves, mistakes, tips)
+        analyzeOpponentPushReactionTime(oppPushes, myCardPlays, mistakes, goodMoves, tips)
 
         val crownsForMe = oppTowerDestroyed.size
         val crownsForOpp = myTowerDestroyed.size
@@ -186,6 +193,70 @@ object LiveBattleAnalyzer {
             dealt >= taken * 1.5 && dealt > 0.05 -> goodMoves += Insight("Bilan de pression favorable", detail, Severity.GOOD)
             taken >= dealt * 1.5 && taken > 0.05 -> mistakes += Insight("Bilan de pression défavorable", detail, Severity.MINOR)
             else -> tips += Insight("Bilan de pression équilibré", detail, Severity.INFO)
+        }
+    }
+
+    /**
+     * Uses [GameEvent.OpponentPush] (a motion spike on the opponent's side of the board — detected,
+     * not identified) to measure how fast I reacted: did I play a card within [PUSH_REACTION_WINDOW_MS]
+     * of each detected deploy? This can't say *what* the opponent played, only *when*, so it
+     * scores reaction speed rather than the decision made.
+     */
+    private fun analyzeOpponentPushReactionTime(
+        oppPushes: List<GameEvent.OpponentPush>,
+        myCardPlays: List<GameEvent.CardPlayed>,
+        mistakes: MutableList<Insight>,
+        goodMoves: MutableList<Insight>,
+        tips: MutableList<Insight>,
+    ) {
+        if (oppPushes.size < MIN_PUSHES_FOR_REACTION_CHECK) return
+
+        val reactionTimesMs = mutableListOf<Long>()
+        var noResponseCount = 0
+        for (push in oppPushes) {
+            val response = myCardPlays
+                .filter { it.timestampMs in push.timestampMs..(push.timestampMs + PUSH_REACTION_WINDOW_MS) }
+                .minByOrNull { it.timestampMs }
+            if (response == null) {
+                noResponseCount++
+            } else {
+                reactionTimesMs += response.timestampMs - push.timestampMs
+            }
+        }
+
+        tips += Insight(
+            title = "Poussées adverses détectées (mouvement)",
+            detail = "${oppPushes.size} déploiement(s) détecté(s) côté adverse via l'activité du plateau (sans identifier la carte). Sert uniquement à mesurer ta vitesse de réaction.",
+            severity = Severity.INFO,
+        )
+
+        if (noResponseCount >= maxOf(1, oppPushes.size / 3)) {
+            mistakes += Insight(
+                title = "Poussées adverses sans réponse",
+                detail = "$noResponseCount poussée(s) adverse(s) sur ${oppPushes.size} n'ont vu aucune carte jouée de ton côté dans les ${PUSH_REACTION_WINDOW_MS / 1000}s qui suivent : possible inattention ou lecture tardive de l'écran.",
+                severity = Severity.MAJOR,
+            )
+            return
+        }
+
+        if (reactionTimesMs.isEmpty()) return
+        val avgReactionMs = reactionTimesMs.average()
+        when {
+            avgReactionMs <= FAST_REACTION_THRESHOLD_MS -> goodMoves += Insight(
+                title = "Bons réflexes face aux poussées adverses",
+                detail = "Temps de réaction moyen d'environ ${(avgReactionMs / 1000.0).let { "%.1f".format(it) }}s après un déploiement adverse détecté : bonne réactivité défensive.",
+                severity = Severity.GOOD,
+            )
+            avgReactionMs >= SLOW_REACTION_THRESHOLD_MS -> mistakes += Insight(
+                title = "Réaction lente face aux poussées adverses",
+                detail = "Temps de réaction moyen d'environ ${(avgReactionMs / 1000.0).let { "%.1f".format(it) }}s après un déploiement adverse détecté : essaie de répondre plus vite pour ne pas laisser l'adversaire prendre l'initiative.",
+                severity = Severity.MINOR,
+            )
+            else -> tips += Insight(
+                title = "Vitesse de réaction correcte",
+                detail = "Temps de réaction moyen d'environ ${(avgReactionMs / 1000.0).let { "%.1f".format(it) }}s après un déploiement adverse détecté.",
+                severity = Severity.INFO,
+            )
         }
     }
 

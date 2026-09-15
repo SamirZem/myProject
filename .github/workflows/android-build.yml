@@ -78,6 +78,6 @@ jobs:
           git rm -rf --cached . > /dev/null
           mkdir -p artifacts
           cp "$APK_PATH" artifacts/clash-analyzer-debug.apk
-          git add artifacts/clash-analyzer-debug.apk
+          git add -f artifacts/clash-analyzer-debug.apk
           git commit -m "APK build from ${{ github.sha }}"
           git push origin HEAD:apk-drop --force

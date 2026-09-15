@@ -11,18 +11,24 @@ téléphone.
   activité, top applications.
 - **Applications** : classement complet par app sur Aujourd'hui / 7 jours / 30
   jours, avec nombre de sessions.
-- **Détail par app** : temps total, moyenne par jour actif, nombre de sessions,
-  session la plus longue, session moyenne, graphique des 14 derniers jours.
-- **Tendances** : graphique des 7 derniers jours, carte de chaleur heure par
-  heure (sur 28 jours cumulés), moyenne par jour de la semaine, statistiques de
-  déverrouillage.
+- **Détail par app** : période ajustable (7 / 30 jours), temps total, moyenne
+  par jour actif, sessions, carte de chaleur heure par heure propre à l'app,
+  moyenne par jour de la semaine, graphique jour par jour.
+- **Tendances** : période ajustable (7 / 30 jours), graphique des 7 derniers
+  jours, carte de chaleur heure par heure (avec légende et détail des apps par
+  heure au tap), répartition par moment de la journée (nuit/matin/après-midi/
+  soir), moyenne par jour de la semaine, carte de chaleur des déverrouillages.
 
 Les données proviennent directement de `UsageStatsManager`/`UsageEvents`
-(transitions premier plan/arrière-plan, déverrouillages) plutôt que des seuls
-totaux agrégés du système, ce qui permet de calculer sessions, session la plus
-longue et répartition horaire réelle. Les journées passées sont archivées dans
-une base Room locale pour que les tendances restent disponibles même après que
-le système ait purgé son propre historique.
+(transitions premier plan/arrière-plan, déverrouillages, allumage/extinction de
+l'écran) plutôt que des seuls totaux agrégés du système, ce qui permet de
+calculer sessions, session la plus longue et répartition horaire réelle. Le
+temps d'usage est en plus recoupé avec l'état de l'écran : Android ne ferme
+pas toujours une app quand le téléphone se verrouille, donc sans ce filtrage
+le temps passé "verrouillé avec une app ouverte" serait compté comme de
+l'usage réel. Les journées passées sont archivées dans une base Room locale
+pour que les tendances restent disponibles même après que le système ait
+purgé son propre historique.
 
 ## Pile technique
 

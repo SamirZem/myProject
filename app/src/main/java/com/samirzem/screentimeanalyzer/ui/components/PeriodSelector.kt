@@ -9,21 +9,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.samirzem.screentimeanalyzer.ui.applist.Period
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PeriodSelector(
-    selected: Period,
-    onSelect: (Period) -> Unit,
+fun <T> PeriodSelector(
+    options: List<T>,
+    selected: T,
+    labelOf: (T) -> String,
+    onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Period.entries.forEach { period ->
+        options.forEach { option ->
             FilterChip(
-                selected = period == selected,
-                onClick = { onSelect(period) },
-                label = { Text(period.label) },
+                selected = option == selected,
+                onClick = { onSelect(option) },
+                label = { Text(labelOf(option)) },
             )
         }
     }

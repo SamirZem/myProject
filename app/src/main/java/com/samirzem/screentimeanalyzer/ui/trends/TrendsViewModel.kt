@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.samirzem.screentimeanalyzer.data.AppInfoResolver
 import com.samirzem.screentimeanalyzer.data.ResolvedAppInfo
 import com.samirzem.screentimeanalyzer.data.ScreenTimeRepository
+import com.samirzem.screentimeanalyzer.ui.common.AnalysisPeriod
 import com.samirzem.screentimeanalyzer.util.TimeUtils
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -29,12 +30,13 @@ data class TimeOfDaySegmentUi(
 
 data class TrendsUiState(
     val isLoading: Boolean = true,
+    val period: AnalysisPeriod = AnalysisPeriod.WEEK,
     val weeklySeries: List<Long> = emptyList(),
     val weeklyLabels: List<String> = emptyList(),
     val hourlyMs: LongArray = LongArray(24),
     val hourlyTopApps: Map<Int, List<TopAppUsage>> = emptyMap(),
     val weekdayAverages: List<WeekdayAverageUi> = emptyList(),
-    val totalUnlocksWeek: Int = 0,
+    val totalUnlocks: Int = 0,
     val averageUnlocksPerDay: Double = 0.0,
     val unlockHourly: LongArray = LongArray(24),
     val timeOfDaySegments: List<TimeOfDaySegmentUi> = emptyList(),
@@ -49,15 +51,17 @@ class TrendsViewModel(
     val uiState: StateFlow<TrendsUiState> = _uiState.asStateFlow()
 
     init {
-        load()
+        load(AnalysisPeriod.WEEK)
     }
 
-    private fun load() {
+    fun selectPeriod(period: AnalysisPeriod) = load(period)
+
+    private fun load(period: AnalysisPeriod) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value = _uiState.value.copy(isLoading = true, period = period)
 
             val today = TimeUtils.todayEpochDay()
-            val buckets = repository.getDayBuckets(today - (ANALYSIS_DAYS - 1), today)
+            val buckets = repository.getDayBuckets(today - (period.days - 1), today)
 
             val hourly = LongArray(24)
             val unlockHourly = LongArray(24)
@@ -119,14 +123,15 @@ class TrendsViewModel(
 
             _uiState.value = TrendsUiState(
                 isLoading = false,
+                period = period,
                 weeklySeries = lastWeek.map { it.totalScreenTimeMs },
                 weeklyLabels = lastWeek.map { dayLabel(it.epochDay) },
                 hourlyMs = hourly,
                 hourlyTopApps = hourlyTopApps,
                 weekdayAverages = weekdayAverages,
-                totalUnlocksWeek = lastWeek.sumOf { it.unlockCount },
-                averageUnlocksPerDay = if (lastWeek.isNotEmpty()) {
-                    lastWeek.sumOf { it.unlockCount }.toDouble() / lastWeek.size
+                totalUnlocks = buckets.sumOf { it.unlockCount },
+                averageUnlocksPerDay = if (buckets.isNotEmpty()) {
+                    buckets.sumOf { it.unlockCount }.toDouble() / buckets.size
                 } else {
                     0.0
                 },
@@ -144,7 +149,6 @@ class TrendsViewModel(
     private class Segment(val label: String, val rangeLabel: String, val hours: IntRange)
 
     private companion object {
-        const val ANALYSIS_DAYS = 28L
         const val TOP_APPS_PER_BREAKDOWN = 5
 
         val SEGMENTS = listOf(

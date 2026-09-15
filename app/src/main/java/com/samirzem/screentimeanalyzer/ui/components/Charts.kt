@@ -37,6 +37,9 @@ fun DailyBarChart(
     onBarClick: ((Int) -> Unit)? = null,
 ) {
     val maxValue = (values.maxOrNull() ?: 0L).coerceAtLeast(1L)
+    // Past ~16 bars, a label under every single one just overlaps into noise; tap-to-reveal
+    // (wired up by callers via onBarClick) is how the exact day is found instead.
+    val showLabels = values.size <= 16
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -58,12 +61,14 @@ fun DailyBarChart(
                         .clip(RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp))
                         .background(if (index == highlightIndex) highlightColor else barColor)
                 )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = labels.getOrElse(index) { "" },
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                )
+                if (showLabels) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = labels.getOrElse(index) { "" },
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }

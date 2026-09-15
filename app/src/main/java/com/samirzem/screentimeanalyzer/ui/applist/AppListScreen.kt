@@ -36,7 +36,12 @@ fun AppListScreen(onAppClick: (String) -> Unit) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Applications", style = MaterialTheme.typography.headlineMedium)
-                PeriodSelector(selected = state.period, onSelect = viewModel::selectPeriod)
+                PeriodSelector(
+                    options = Period.entries,
+                    selected = state.period,
+                    labelOf = { it.label },
+                    onSelect = viewModel::selectPeriod,
+                )
             }
         }
 

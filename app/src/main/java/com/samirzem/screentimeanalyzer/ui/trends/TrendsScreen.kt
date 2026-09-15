@@ -29,9 +29,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.samirzem.screentimeanalyzer.ui.LambdaViewModelFactory
+import com.samirzem.screentimeanalyzer.ui.common.AnalysisPeriod
 import com.samirzem.screentimeanalyzer.ui.components.AppUsageRow
 import com.samirzem.screentimeanalyzer.ui.components.DailyBarChart
 import com.samirzem.screentimeanalyzer.ui.components.HourHeatmap
+import com.samirzem.screentimeanalyzer.ui.components.PeriodSelector
 import com.samirzem.screentimeanalyzer.ui.rememberApp
 import com.samirzem.screentimeanalyzer.util.Formatters
 
@@ -54,7 +56,17 @@ fun TrendsScreen() {
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(28.dp),
     ) {
-        item { Text("Tendances", style = MaterialTheme.typography.headlineMedium) }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Tendances", style = MaterialTheme.typography.headlineMedium)
+                PeriodSelector(
+                    options = AnalysisPeriod.entries,
+                    selected = state.period,
+                    labelOf = { it.label },
+                    onSelect = viewModel::selectPeriod,
+                )
+            }
+        }
 
         item {
             SectionCard(title = "7 derniers jours") {
@@ -73,7 +85,7 @@ fun TrendsScreen() {
         }
 
         item {
-            SectionCard(title = "Répartition par heure (28 derniers jours cumulés)") {
+            SectionCard(title = "Répartition par heure (${state.period.label} cumulés)") {
                 Text(
                     "Touche une heure pour voir ce que tu utilisais à ce moment.",
                     style = MaterialTheme.typography.labelSmall,
@@ -130,11 +142,11 @@ fun TrendsScreen() {
                 ) {
                     Column {
                         Text(
-                            state.totalUnlocksWeek.toString(),
+                            state.totalUnlocks.toString(),
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                         )
-                        Text("cette semaine", style = MaterialTheme.typography.bodyMedium)
+                        Text("sur ${state.period.label.lowercase()}", style = MaterialTheme.typography.bodyMedium)
                     }
                     Column {
                         Text(
@@ -147,7 +159,7 @@ fun TrendsScreen() {
                 }
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Répartition par heure (28 derniers jours cumulés)",
+                    "Répartition par heure (${state.period.label} cumulés)",
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(Modifier.height(8.dp))

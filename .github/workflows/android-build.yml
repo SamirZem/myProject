@@ -27,14 +27,24 @@ jobs:
           java-version: "17"
 
       - name: Install required Android SDK packages
-        # ubuntu-latest runners already ship an Android SDK (ANDROID_HOME is preset); we just
-        # need to make sure the exact platform/build-tools this project targets are installed.
+        # ubuntu-latest runners already ship an Android SDK; we just need to make sure the
+        # exact platform/build-tools this project targets are installed. The cmdline-tools
+        # subdirectory layout has changed across runner-image versions, so search for the
+        # sdkmanager binary instead of hardcoding its path.
         run: |
-          SDK_ROOT="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
-          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -maxdepth 2 -name sdkmanager -type f | sort | tail -n 1)"
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "SDK_ROOT=$SDK_ROOT"
+          SDKMANAGER="$(find "$SDK_ROOT" -maxdepth 6 -type f -name sdkmanager 2>/dev/null | sort | tail -n 1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::error::Could not find sdkmanager under $SDK_ROOT"
+            find "$SDK_ROOT" -maxdepth 3 2>/dev/null
+            exit 1
+          fi
           echo "Using sdkmanager at: $SDKMANAGER"
           yes | "$SDKMANAGER" --licenses > /dev/null
           "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew

@@ -68,6 +68,21 @@ fun TrendsScreen() {
             }
         }
 
+        if (state.insights.isNotEmpty()) {
+            item {
+                SectionCard(title = "Résumé") {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        state.insights.forEach { sentence ->
+                            Row {
+                                Text("•  ", style = MaterialTheme.typography.bodyMedium)
+                                Text(sentence, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         item {
             SectionCard(title = "7 derniers jours") {
                 DailyBarChart(

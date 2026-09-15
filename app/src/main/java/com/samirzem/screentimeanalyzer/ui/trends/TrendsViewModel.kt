@@ -40,6 +40,7 @@ data class TrendsUiState(
     val averageUnlocksPerDay: Double = 0.0,
     val unlockHourly: LongArray = LongArray(24),
     val timeOfDaySegments: List<TimeOfDaySegmentUi> = emptyList(),
+    val insights: List<String> = emptyList(),
 )
 
 class TrendsViewModel(
@@ -62,6 +63,7 @@ class TrendsViewModel(
 
             val today = TimeUtils.todayEpochDay()
             val buckets = repository.getDayBuckets(today - (period.days - 1), today)
+            val previousBuckets = repository.getDayBuckets(today - (2 * period.days - 1), today - period.days)
 
             val hourly = LongArray(24)
             val unlockHourly = LongArray(24)
@@ -121,6 +123,16 @@ class TrendsViewModel(
                 )
             }
 
+            val insights = TrendsInsights.build(
+                period = period,
+                buckets = buckets,
+                previousBuckets = previousBuckets,
+                unlockHourly = unlockHourly,
+                timeOfDaySegments = timeOfDaySegments,
+                weekdayAverages = weekdayAverages,
+                appInfoResolver = appInfoResolver,
+            )
+
             _uiState.value = TrendsUiState(
                 isLoading = false,
                 period = period,
@@ -137,6 +149,7 @@ class TrendsViewModel(
                 },
                 unlockHourly = unlockHourly,
                 timeOfDaySegments = timeOfDaySegments,
+                insights = insights,
             )
         }
     }

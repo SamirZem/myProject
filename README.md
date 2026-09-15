@@ -32,6 +32,13 @@ couleurs de pixels sur des zones calibrées), pas un modèle entraîné pour rec
 chaque troupe adverse ou son placement exact au pixel près. Elle donne le *timing* et les
 *échanges d'élixir*, pas une reconnaissance parfaite de chaque unité sur le terrain.
 
+**Découvert en analysant une vraie capture d'écran fournie par l'utilisateur** (voir
+`CalibrationProfile.default()`) : Clash Royale n'affiche **jamais** le compteur d'élixir de
+l'adversaire en 1v1 classique — contrairement à l'hypothèse initiale du projet, ce n'est donc pas
+observable par capture d'écran, et le champ correspondant a été retiré du modèle de données. Autre
+point corrigé : les barres de PV des tours ne sont **pas** d'une couleur unique — bleues côté
+allié, rouges/roses côté adversaire — la calibration distingue maintenant les deux.
+
 ## Build et APK
 
 Cet environnement de développement n'a pas d'accès au dépôt Maven de Google (`dl.google.com`, qui
@@ -50,10 +57,15 @@ l'onglet **Actions** du dépôt.
   expérimentale utilisée sans opt-in. Il reste conseillé d'ouvrir le projet dans Android Studio
   avant d'installer l'APK sur un vrai Pixel 8 Pro, pour repérer d'éventuels soucis que seul un test
   sur device révèle (permissions, calibration, performance).
-- Les **valeurs de calibration par défaut** (position de la barre d'élixir, des tours, des cases
-  de cartes, couleurs de référence) sont des estimations raisonnables de la mise en page de Clash
-  Royale, pas des mesures faites sur un vrai écran. Il faudra presque certainement les ajuster via
-  l'écran **Calibration** de l'app avant que l'analyse live soit fiable.
+- Les **valeurs de calibration par défaut** ont été mesurées à partir d'une vraie capture d'écran
+  Clash Royale (1008×2244, fournie par l'utilisateur), pas devinées à l'aveugle — position et
+  couleurs de la barre d'élixir, des 4 cases de main et des tours princesses (alliées et
+  ennemies) viennent d'une analyse pixel par pixel de cette image. Deux limites subsistent : les
+  tours du roi n'apparaissent jamais endommagées sur cette capture (aucune barre de PV visible
+  avant le premier dégât), donc leur position reste une estimation géométrique ; et les couleurs
+  "vide/endommagée" des barres n'ont pas pu être mesurées puisque toutes les barres étaient
+  pleines sur cette capture. Utilise l'écran **Calibration** pour affiner ces deux points, et pour
+  corriger tout écart dû à la résolution ou aux proportions d'écran de ton propre appareil.
 
 ## Démarrage rapide
 

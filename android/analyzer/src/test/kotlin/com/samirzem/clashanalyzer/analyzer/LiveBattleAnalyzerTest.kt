@@ -17,7 +17,6 @@ class LiveBattleAnalyzerTest {
             TelemetrySample(
                 timestampMs = t,
                 myElixir = 5.0,
-                oppElixir = 5.0,
                 myTowerHpFractions = listOf(1.0),
                 oppTowerHpFractions = listOf(1.0),
                 handCards = listOf(if (t < 3000) "Hog Rider" else "Ice Golem", "Musketeer", "Cannon", "Fireball"),
@@ -39,7 +38,6 @@ class LiveBattleAnalyzerTest {
             TelemetrySample(
                 timestampMs = t,
                 myElixir = if (t < 6000) 10.0 else 1.0,
-                oppElixir = 10.0,
                 myTowerHpFractions = listOf(if (t < 9000) 1.0 else 0.85),
                 oppTowerHpFractions = listOf(1.0),
                 handCards = listOf(
@@ -62,7 +60,6 @@ class LiveBattleAnalyzerTest {
             TelemetrySample(
                 timestampMs = t,
                 myElixir = 5.0,
-                oppElixir = 5.0,
                 myTowerHpFractions = listOf(1.0),
                 oppTowerHpFractions = listOf(if (t < 7000) 1.0 else 0.85),
                 handCards = listOf(if (t < 3000) "Hog Rider" else "Ice Golem", "Musketeer", "Cannon", "Fireball"),
@@ -80,7 +77,6 @@ class LiveBattleAnalyzerTest {
             TelemetrySample(
                 timestampMs = t,
                 myElixir = 8.0,
-                oppElixir = 5.0,
                 myTowerHpFractions = listOf(if (t < 4000) 1.0 else 0.8),
                 oppTowerHpFractions = listOf(1.0),
                 handCards = listOf("Musketeer", "Cannon", "Fireball", "Zap"),
@@ -98,7 +94,6 @@ class LiveBattleAnalyzerTest {
             TelemetrySample(
                 timestampMs = t,
                 myElixir = 10.0,
-                oppElixir = 5.0,
                 myTowerHpFractions = listOf(1.0),
                 oppTowerHpFractions = listOf(1.0),
                 handCards = listOf("Musketeer", "Cannon", "Fireball", "Zap"),

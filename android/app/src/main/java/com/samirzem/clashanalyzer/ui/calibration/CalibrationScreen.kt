@@ -50,7 +50,8 @@ private data class Region(val label: String, val get: (CalibrationProfile) -> No
 
 private fun regions(): List<Region> = listOf(
     Region("Élixir (moi)", { it.myElixirBarRect }, { p, r -> p.copy(myElixirBarRect = r) }),
-    Region("Élixir (adversaire)", { it.oppElixirBarRect }, { p, r -> p.copy(oppElixirBarRect = r) }),
+    // No "Élixir (adversaire)" region: Clash Royale's normal 1v1 UI never shows the opponent's
+    // elixir count, so there is nothing on screen to calibrate for it.
     Region("Carte main 1", { it.handSlotRects[0] }, { p, r -> p.copy(handSlotRects = p.handSlotRects.toMutableList().also { it[0] = r }) }),
     Region("Carte main 2", { it.handSlotRects[1] }, { p, r -> p.copy(handSlotRects = p.handSlotRects.toMutableList().also { it[1] = r }) }),
     Region("Carte main 3", { it.handSlotRects[2] }, { p, r -> p.copy(handSlotRects = p.handSlotRects.toMutableList().also { it[2] = r }) }),
@@ -131,10 +132,20 @@ fun CalibrationScreen() {
                     frame?.let { profile = profile.copy(elixirEmptyColor = sampleCenter(it, current)) }
                 }) { Text("Élixir vide") }
             }
+            Text(
+                "Les barres de PV sont bleues côté allié et rouges/roses côté adversaire : vise une " +
+                    "de tes tours pour la première, une tour adverse pour la seconde.",
+                style = MaterialTheme.typography.bodySmall,
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = {
-                    frame?.let { profile = profile.copy(towerHealthyColor = sampleCenter(it, current)) }
-                }) { Text("Tour pleine vie") }
+                    frame?.let { profile = profile.copy(myTowerHealthyColor = sampleCenter(it, current)) }
+                }) { Text("Tour pleine vie (moi)") }
+                Button(onClick = {
+                    frame?.let { profile = profile.copy(oppTowerHealthyColor = sampleCenter(it, current)) }
+                }) { Text("Tour pleine vie (adv.)") }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = {
                     frame?.let { profile = profile.copy(towerBackgroundColor = sampleCenter(it, current)) }
                 }) { Text("Fond barre de tour") }
@@ -149,7 +160,7 @@ fun CalibrationScreen() {
             OutlinedTextField(value = cardNameForTemplate, onValueChange = { cardNameForTemplate = it }, label = { Text("Nom exact de la carte (ex: Hog Rider)") })
             Button(onClick = {
                 val f = frame
-                if (f != null && cardNameForTemplate.isNotBlank() && selectedRegion in 2..5) {
+                if (f != null && cardNameForTemplate.isNotBlank() && selectedRegion in 1..4) {
                     val rect = regionList[selectedRegion].get(profile)
                     val crop = FrameAnalyzer.cropHandSlot(f, rect)
                     ServiceLocator.cardTemplateStore.saveTemplate(cardNameForTemplate.trim(), crop)

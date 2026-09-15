@@ -13,15 +13,19 @@ data class NormalizedRect(
 
 /**
  * Where on screen to read each piece of game state, and what colors mean "filled" vs "empty"
- * for the elixir/HP bars. The default values are a best-effort guess at Clash Royale's portrait
- * layout proportions — they were not measured against a real device (this project was built
- * without access to a Clash Royale screenshot or an Android emulator) and will very likely need
- * adjustment on the Calibration screen before the live analysis is usable.
+ * for the elixir/HP bars.
+ *
+ * The default values were measured from a real 1008x2244 Clash Royale screenshot (not the Pixel
+ * 8 Pro's own resolution, but fractions are resolution-independent), so they should already be
+ * close. Two things they can't get from a single screenshot: exact HP-bar positions for king
+ * towers, which only appear once a king tower has taken damage — this match's screenshot showed
+ * neither king damaged, so those two rects are estimated from tower geometry instead of measured
+ * directly; and the "empty" track colors for the elixir and tower bars, since every bar in that
+ * screenshot happened to be full. Expect to still need the Calibration screen, just less than before.
  */
 @Serializable
 data class CalibrationProfile(
     val myElixirBarRect: NormalizedRect,
-    val oppElixirBarRect: NormalizedRect,
     /** Left-to-right, the 4 currently visible hand card slots. */
     val handSlotRects: List<NormalizedRect>,
     /** [king, left princess, right princess] health-bar rectangles, my side. */
@@ -31,35 +35,37 @@ data class CalibrationProfile(
     val elixirFilledColor: Int,
     /** Color sampled from an empty/background elixir bar segment. */
     val elixirEmptyColor: Int,
-    /** Color sampled from a healthy (full HP) tower bar. */
-    val towerHealthyColor: Int,
-    /** Color sampled from the tower bar's empty background (visible once damaged). */
+    /** Color sampled from one of MY (ally) tower bars at full health — these render blue. */
+    val myTowerHealthyColor: Int,
+    /** Color sampled from one of the OPPONENT's tower bars at full health — these render red/pink. */
+    val oppTowerHealthyColor: Int,
+    /** Color sampled from a tower bar's empty background (visible once damaged), shared by both sides. */
     val towerBackgroundColor: Int,
 ) {
     companion object {
         fun default(): CalibrationProfile = CalibrationProfile(
-            myElixirBarRect = NormalizedRect(0.06f, 0.955f, 0.62f, 0.975f),
-            oppElixirBarRect = NormalizedRect(0.06f, 0.045f, 0.40f, 0.06f),
+            myElixirBarRect = NormalizedRect(0.21f, 0.965f, 0.96f, 0.988f),
             handSlotRects = listOf(
-                NormalizedRect(0.30f, 0.865f, 0.42f, 0.945f),
-                NormalizedRect(0.44f, 0.865f, 0.56f, 0.945f),
-                NormalizedRect(0.58f, 0.865f, 0.70f, 0.945f),
-                NormalizedRect(0.72f, 0.865f, 0.84f, 0.945f),
+                NormalizedRect(0.214f, 0.855f, 0.363f, 0.959f),
+                NormalizedRect(0.368f, 0.855f, 0.517f, 0.959f),
+                NormalizedRect(0.522f, 0.855f, 0.671f, 0.959f),
+                NormalizedRect(0.676f, 0.855f, 0.824f, 0.959f),
             ),
             myTowerRects = listOf(
-                NormalizedRect(0.44f, 0.78f, 0.56f, 0.79f), // king
-                NormalizedRect(0.18f, 0.70f, 0.30f, 0.71f), // left princess
-                NormalizedRect(0.70f, 0.70f, 0.82f, 0.71f), // right princess
+                NormalizedRect(0.40f, 0.705f, 0.60f, 0.720f), // king — estimated, not damaged in the reference screenshot
+                NormalizedRect(0.164f, 0.608f, 0.286f, 0.623f), // left princess — measured
+                NormalizedRect(0.754f, 0.608f, 0.876f, 0.623f), // right princess — measured
             ),
             oppTowerRects = listOf(
-                NormalizedRect(0.44f, 0.14f, 0.56f, 0.15f), // king
-                NormalizedRect(0.18f, 0.22f, 0.30f, 0.23f), // left princess
-                NormalizedRect(0.70f, 0.22f, 0.82f, 0.23f), // right princess
+                NormalizedRect(0.40f, 0.170f, 0.60f, 0.185f), // king — estimated, not damaged in the reference screenshot
+                NormalizedRect(0.162f, 0.186f, 0.286f, 0.199f), // left princess — measured
+                NormalizedRect(0.752f, 0.186f, 0.876f, 0.199f), // right princess — measured
             ),
-            elixirFilledColor = 0xFFB03DF0.toInt(),
-            elixirEmptyColor = 0xFF2B2140.toInt(),
-            towerHealthyColor = 0xFF4CD964.toInt(),
-            towerBackgroundColor = 0xFF1A1A1A.toInt(),
+            elixirFilledColor = 0xFFE37FDE.toInt(),
+            elixirEmptyColor = 0xFF0E367E.toInt(),
+            myTowerHealthyColor = 0xFF84A4C0.toInt(),
+            oppTowerHealthyColor = 0xFFD74B74.toInt(),
+            towerBackgroundColor = 0xFF1E1E2E.toInt(),
         )
     }
 }

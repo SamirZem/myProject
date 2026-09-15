@@ -47,8 +47,9 @@ object FrameAnalyzer {
     fun readElixir(bitmap: Bitmap, rect: NormalizedRect, profile: CalibrationProfile): Double =
         readFillFraction(bitmap, rect, profile.elixirFilledColor, profile.elixirEmptyColor) * 10.0
 
-    fun readTowerHpFraction(bitmap: Bitmap, rect: NormalizedRect, profile: CalibrationProfile): Double =
-        readFillFraction(bitmap, rect, profile.towerHealthyColor, profile.towerBackgroundColor)
+    /** Ally and enemy tower bars render in different colors (blue vs red/pink), so the caller picks which. */
+    fun readTowerHpFraction(bitmap: Bitmap, rect: NormalizedRect, healthyColor: Int, backgroundColor: Int): Double =
+        readFillFraction(bitmap, rect, healthyColor, backgroundColor)
 
     fun cropHandSlot(bitmap: Bitmap, rect: NormalizedRect): Bitmap {
         val px = toPixelRect(bitmap, rect)

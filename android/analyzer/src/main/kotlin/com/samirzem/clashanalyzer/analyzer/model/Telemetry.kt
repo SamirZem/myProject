@@ -10,9 +10,12 @@ package com.samirzem.clashanalyzer.analyzer.model
  */
 data class TelemetrySample(
     val timestampMs: Long,
-    /** 0..10, tenths allowed since the bar fills continuously between pips. */
+    /**
+     * 0..10, tenths allowed since the bar fills continuously between pips. There is no
+     * equivalent for the opponent: Clash Royale's normal 1v1 UI never displays the
+     * opponent's elixir count, so it isn't something screen-reading can observe.
+     */
     val myElixir: Double,
-    val oppElixir: Double,
     /** King tower first, then remaining princess towers. Empty entry once destroyed. */
     val myTowerHpFractions: List<Double>,
     val oppTowerHpFractions: List<Double>,

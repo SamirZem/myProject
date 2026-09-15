@@ -67,9 +67,12 @@ class MatchSessionController(
         return TelemetrySample(
             timestampMs = System.currentTimeMillis() - startTimeMs,
             myElixir = FrameAnalyzer.readElixir(frame, profile.myElixirBarRect, profile),
-            oppElixir = FrameAnalyzer.readElixir(frame, profile.oppElixirBarRect, profile),
-            myTowerHpFractions = profile.myTowerRects.map { FrameAnalyzer.readTowerHpFraction(frame, it, profile) },
-            oppTowerHpFractions = profile.oppTowerRects.map { FrameAnalyzer.readTowerHpFraction(frame, it, profile) },
+            myTowerHpFractions = profile.myTowerRects.map {
+                FrameAnalyzer.readTowerHpFraction(frame, it, profile.myTowerHealthyColor, profile.towerBackgroundColor)
+            },
+            oppTowerHpFractions = profile.oppTowerRects.map {
+                FrameAnalyzer.readTowerHpFraction(frame, it, profile.oppTowerHealthyColor, profile.towerBackgroundColor)
+            },
             handCards = handCards,
         )
     }

@@ -6,13 +6,13 @@
     android:viewportHeight="108">
     <!-- Simple clock/gauge glyph representing screen-time tracking -->
     <path
-        android:fillColor="#00E5C7"
+        android:fillColor="#17E8C6"
         android:pathData="M54,26a28,28 0,1 0,0.01 0z
             M54,32a22,22 0,1 1,-0.01 0z" />
     <path
-        android:fillColor="#00E5C7"
+        android:fillColor="#17E8C6"
         android:pathData="M52,38h4v18l14,8l-2,3.5l-16,-9.5z" />
     <path
-        android:fillColor="#FF7A5C"
+        android:fillColor="#FF8A65"
         android:pathData="M50,20h8v8h-8z" />
 </vector>

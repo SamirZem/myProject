@@ -46,7 +46,7 @@ class CaptureForegroundService : Service() {
         startForeground(NOTIFICATION_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
 
         val resultCode = intent?.getIntExtra(EXTRA_RESULT_CODE, 0) ?: 0
-        val resultData = intent?.getParcelableExtra<Intent>(EXTRA_RESULT_DATA)
+        val resultData = intent?.getParcelableExtra(EXTRA_RESULT_DATA, Intent::class.java)
         if (resultData == null) {
             stopSelf()
             return START_NOT_STICKY

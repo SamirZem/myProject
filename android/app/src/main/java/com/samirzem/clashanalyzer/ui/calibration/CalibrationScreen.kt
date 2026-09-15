@@ -68,7 +68,6 @@ fun CalibrationScreen() {
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf(CalibrationProfile.default()) }
     var selectedRegion by remember { mutableIntStateOf(0) }
-    var slotForTemplate by remember { mutableIntStateOf(0) }
     var cardNameForTemplate by remember { mutableStateOf("") }
     var status by remember { mutableStateOf<String?>(null) }
     val frame by CaptureForegroundService.latestFrame.collectAsState()

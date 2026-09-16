@@ -41,6 +41,8 @@ object CardDatabase {
         CardInfo("Goblin Giant", "Géant Gobelin", 6, CardType.TROOP, setOf(CardTag.WIN_CONDITION, CardTag.TANK)),
         CardInfo("Electro Giant", "Géant Électrique", 8, CardType.TROOP, setOf(CardTag.WIN_CONDITION, CardTag.TANK)),
         CardInfo("Three Musketeers", "Trois Mousquetaires", 9, CardType.TROOP, setOf(CardTag.WIN_CONDITION, CardTag.RANGED_SUPPORT)),
+        CardInfo("Skeleton Barrel", "Tonneau de Squelettes", 3, CardType.TROOP, setOf(CardTag.WIN_CONDITION, CardTag.AIR, CardTag.CYCLE)),
+        CardInfo("Royal Hogs", "Sangliers Royaux", 5, CardType.TROOP, setOf(CardTag.WIN_CONDITION, CardTag.SWARM)),
 
         // Small spells (<= 3 elixir)
         CardInfo("Zap", "Étincelle", 2, CardType.SPELL, setOf(CardTag.SMALL_SPELL, CardTag.CYCLE)),
@@ -52,6 +54,7 @@ object CardDatabase {
         CardInfo("Tornado", "Tornade", 3, CardType.SPELL, setOf(CardTag.SMALL_SPELL)),
         CardInfo("Royal Delivery", "Livraison Royale", 3, CardType.SPELL, setOf(CardTag.SMALL_SPELL)),
         CardInfo("Earthquake", "Tremblement de Terre", 3, CardType.SPELL, setOf(CardTag.SMALL_SPELL)),
+        CardInfo("Void", "Vide", 3, CardType.SPELL, setOf(CardTag.SMALL_SPELL)),
 
         // Big spells (>= 4 elixir)
         CardInfo("Fireball", "Boule de Feu", 4, CardType.SPELL, setOf(CardTag.BIG_SPELL, CardTag.SPLASH)),
@@ -88,6 +91,10 @@ object CardDatabase {
         CardInfo("Magic Archer", "Archer Magique", 4, CardType.TROOP, setOf(CardTag.ANTI_AIR, CardTag.RANGED_SUPPORT)),
         CardInfo("Musketeer", "Mousquetaire", 4, CardType.TROOP, setOf(CardTag.ANTI_AIR, CardTag.RANGED_SUPPORT)),
         CardInfo("Archers", "Archères", 3, CardType.TROOP, setOf(CardTag.ANTI_AIR, CardTag.RANGED_SUPPORT, CardTag.CYCLE)),
+        CardInfo("Princess", "Princesse", 3, CardType.TROOP, setOf(CardTag.RANGED_SUPPORT, CardTag.SPLASH, CardTag.ANTI_AIR, CardTag.CYCLE)),
+        CardInfo("Bowler", "Bouliste", 5, CardType.TROOP, setOf(CardTag.SPLASH)),
+        CardInfo("Sparky", "Sparky", 6, CardType.TROOP, setOf(CardTag.SPLASH)),
+        CardInfo("Hunter", "Chasseur", 4, CardType.TROOP, setOf(CardTag.SPLASH)),
 
         // Tanks / mini tanks
         CardInfo("P.E.K.K.A", "P.E.K.K.A", 7, CardType.TROOP, setOf(CardTag.TANK)),
@@ -103,6 +110,8 @@ object CardDatabase {
         CardInfo("Lumberjack", "Bûcheron", 4, CardType.TROOP, setOf(CardTag.MINI_TANK)),
         CardInfo("Ice Golem", "Golem de Glace", 2, CardType.TROOP, setOf(CardTag.MINI_TANK, CardTag.CYCLE)),
         CardInfo("Fisherman", "Pêcheur", 3, CardType.TROOP, setOf(CardTag.MINI_TANK, CardTag.CYCLE)),
+        CardInfo("Cannon Cart", "Chariot Canon", 5, CardType.TROOP, setOf(CardTag.MINI_TANK)),
+        CardInfo("Battle Healer", "Guérisseuse de Combat", 4, CardType.TROOP, setOf(CardTag.MINI_TANK)),
 
         // Buildings (defense)
         CardInfo("Cannon", "Canon", 3, CardType.BUILDING, setOf(CardTag.BUILDING_DEFENSE, CardTag.CYCLE)),
@@ -145,6 +154,7 @@ object CardDatabase {
         CardInfo("Goblin Machine", "Machine à Gobelins", 5, CardType.TROOP, setOf(CardTag.MINI_TANK)),
         CardInfo("Goblinstein", "Gobelinstein", 5, CardType.TROOP, setOf(CardTag.SWARM)),
         CardInfo("Boss Bandit", "Bandit en Chef", 5, CardType.TROOP, setOf(CardTag.MINI_TANK)),
+        CardInfo("Berserker", "Berserker", 3, CardType.TROOP, setOf(CardTag.CYCLE)),
     ).associateBy { it.name }
 
     operator fun get(name: String): CardInfo = cards[name] ?: UNKNOWN_CARD.copy(name = name, frenchName = name)

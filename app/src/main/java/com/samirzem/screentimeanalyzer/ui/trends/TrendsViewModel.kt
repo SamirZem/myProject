@@ -28,6 +28,8 @@ data class TimeOfDaySegmentUi(
     val topApps: List<TopAppUsage>,
 )
 
+data class CategoryUsageUi(val label: String, val totalMs: Long)
+
 data class TrendsUiState(
     val isLoading: Boolean = true,
     val period: AnalysisPeriod = AnalysisPeriod.WEEK,
@@ -41,6 +43,7 @@ data class TrendsUiState(
     val unlockHourly: LongArray = LongArray(24),
     val timeOfDaySegments: List<TimeOfDaySegmentUi> = emptyList(),
     val insights: List<String> = emptyList(),
+    val categoryBreakdown: List<CategoryUsageUi> = emptyList(),
 )
 
 class TrendsViewModel(
@@ -103,6 +106,17 @@ class TrendsViewModel(
                 )
             }
 
+            val categoryTotals = mutableMapOf<String, Long>()
+            for (bucket in buckets) {
+                for (stat in bucket.perApp) {
+                    val category = appInfoResolver.resolve(stat.packageName).category
+                    categoryTotals[category] = (categoryTotals[category] ?: 0L) + stat.totalTimeMs
+                }
+            }
+            val categoryBreakdown = categoryTotals.entries
+                .sortedByDescending { it.value }
+                .map { (label, ms) -> CategoryUsageUi(label, ms) }
+
             val lastWeek = buckets.takeLast(7)
 
             val timeOfDaySegments = SEGMENTS.map { segment ->
@@ -150,6 +164,7 @@ class TrendsViewModel(
                 unlockHourly = unlockHourly,
                 timeOfDaySegments = timeOfDaySegments,
                 insights = insights,
+                categoryBreakdown = categoryBreakdown,
             )
         }
     }

@@ -4,6 +4,7 @@ import android.app.Application
 import com.samirzem.screentimeanalyzer.data.AppInfoResolver
 import com.samirzem.screentimeanalyzer.data.ScreenTimeRepository
 import com.samirzem.screentimeanalyzer.data.UsageAnalyticsEngine
+import com.samirzem.screentimeanalyzer.data.export.UsageDataExporter
 import com.samirzem.screentimeanalyzer.data.local.AppDatabase
 import com.samirzem.screentimeanalyzer.permission.UsagePermission
 import com.samirzem.screentimeanalyzer.worker.UsageSnapshotWorker
@@ -18,6 +19,8 @@ class ScreenTimeApplication : Application() {
     }
 
     val appInfoResolver: AppInfoResolver by lazy { AppInfoResolver(this) }
+
+    val dataExporter: UsageDataExporter by lazy { UsageDataExporter(this, repository, appInfoResolver) }
 
     override fun onCreate() {
         super.onCreate()

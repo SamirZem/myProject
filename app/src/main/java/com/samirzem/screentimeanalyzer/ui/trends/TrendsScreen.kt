@@ -1,29 +1,44 @@
 package com.samirzem.screentimeanalyzer.ui.trends
 
+import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,6 +52,7 @@ import com.samirzem.screentimeanalyzer.ui.components.PeriodSelector
 import com.samirzem.screentimeanalyzer.ui.rememberApp
 import com.samirzem.screentimeanalyzer.ui.theme.SeriesColors
 import com.samirzem.screentimeanalyzer.util.Formatters
+import kotlinx.coroutines.launch
 
 @Composable
 fun TrendsScreen() {
@@ -59,7 +75,14 @@ fun TrendsScreen() {
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Tendances", style = MaterialTheme.typography.headlineMedium)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Tendances", style = MaterialTheme.typography.headlineMedium)
+                    ExportButton()
+                }
                 PeriodSelector(
                     options = AnalysisPeriod.entries,
                     selected = state.period,
@@ -84,6 +107,14 @@ fun TrendsScreen() {
                             }
                         }
                     }
+                }
+            }
+        }
+
+        if (state.categoryBreakdown.isNotEmpty()) {
+            item {
+                SectionCard(title = "Par catégorie") {
+                    CategoryBreakdown(state.categoryBreakdown)
                 }
             }
         }
@@ -298,6 +329,101 @@ private fun SectionCard(title: String, content: @Composable () -> Unit) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(12.dp))
             content()
+        }
+    }
+}
+
+@Composable
+private fun CategoryBreakdown(categories: List<CategoryUsageUi>) {
+    val total = categories.sumOf { it.totalMs }.coerceAtLeast(1L)
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(14.dp)
+                .clip(RoundedCornerShape(7.dp)),
+        ) {
+            categories.forEachIndexed { index, category ->
+                val weight = (category.totalMs.toFloat() / total).coerceAtLeast(0.01f)
+                Box(
+                    modifier = Modifier
+                        .weight(weight)
+                        .fillMaxHeight()
+                        .background(SeriesColors[index % SeriesColors.size]),
+                )
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        categories.forEachIndexed { index, category ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(SeriesColors[index % SeriesColors.size]),
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = category.label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "${(category.totalMs * 100 / total)} %",
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = Formatters.duration(category.totalMs),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Regenerates the CSV export (screen time per app per day, unlocks per day) and
+ * hands it to the system share sheet - the whole local history stays yours even
+ * if the app is ever uninstalled.
+ */
+@Composable
+private fun ExportButton() {
+    val app = rememberApp()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var isExporting by remember { mutableStateOf(false) }
+
+    IconButton(
+        enabled = !isExporting,
+        onClick = {
+            isExporting = true
+            scope.launch {
+                try {
+                    val files = app.dataExporter.exportToCsvFiles()
+                    val uris = ArrayList(files.map { app.dataExporter.uriFor(it) })
+                    val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                        type = "text/csv"
+                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(Intent.createChooser(intent, "Exporter mes données"))
+                } finally {
+                    isExporting = false
+                }
+            }
+        },
+    ) {
+        if (isExporting) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+        } else {
+            Icon(Icons.Filled.Share, contentDescription = "Exporter mes données")
         }
     }
 }

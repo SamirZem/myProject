@@ -3,6 +3,7 @@ package com.samirzem.screentimeanalyzer.data
 import com.samirzem.screentimeanalyzer.data.local.DailyAppUsageEntity
 import com.samirzem.screentimeanalyzer.data.local.DailyUnlockSummaryEntity
 import com.samirzem.screentimeanalyzer.data.local.HourlyAppUsageEntity
+import com.samirzem.screentimeanalyzer.data.local.HourlySwitchEntity
 import com.samirzem.screentimeanalyzer.data.local.HourlyUnlockEntity
 import com.samirzem.screentimeanalyzer.data.local.HourlyUsageEntity
 import com.samirzem.screentimeanalyzer.data.local.UsageDao
@@ -90,6 +91,7 @@ class ScreenTimeRepository(
         val hourlyRows = dao.hourlyIn(startEpochDay, endEpochDay).groupBy { it.epochDay }
         val hourlyAppRows = dao.hourlyAppIn(startEpochDay, endEpochDay).groupBy { it.epochDay }
         val hourlyUnlockRows = dao.hourlyUnlockIn(startEpochDay, endEpochDay).groupBy { it.epochDay }
+        val hourlySwitchRows = dao.hourlySwitchIn(startEpochDay, endEpochDay).groupBy { it.epochDay }
 
         val days = appRows.keys + unlockRows.keys + hourlyRows.keys
         return days.associateWith { epochDay ->
@@ -117,6 +119,9 @@ class ScreenTimeRepository(
             val unlockHourly = IntArray(24)
             (hourlyUnlockRows[epochDay] ?: emptyList()).forEach { unlockHourly[it.hour] = it.count }
 
+            val switchHourly = IntArray(24)
+            (hourlySwitchRows[epochDay] ?: emptyList()).forEach { switchHourly[it.hour] = it.count }
+
             val unlock = unlockRows[epochDay]
 
             DayBucket(
@@ -128,6 +133,7 @@ class ScreenTimeRepository(
                 firstUnlockAtMs = unlock?.firstUnlockAtMs,
                 lastUnlockAtMs = unlock?.lastUnlockAtMs,
                 unlockHourly = unlockHourly,
+                switchHourly = switchHourly,
             )
         }
     }
@@ -157,13 +163,16 @@ class ScreenTimeRepository(
         val hourlyUnlockRows = bucket.unlockHourly.withIndex().mapNotNull { (hour, count) ->
             if (count > 0) HourlyUnlockEntity(bucket.epochDay, hour, count) else null
         }
+        val hourlySwitchRows = bucket.switchHourly.withIndex().mapNotNull { (hour, count) ->
+            if (count > 0) HourlySwitchEntity(bucket.epochDay, hour, count) else null
+        }
         val unlockRow = DailyUnlockSummaryEntity(
             epochDay = bucket.epochDay,
             unlockCount = bucket.unlockCount,
             firstUnlockAtMs = bucket.firstUnlockAtMs,
             lastUnlockAtMs = bucket.lastUnlockAtMs,
         )
-        dao.saveDay(bucket.epochDay, appRows, unlockRow, hourlyRows, hourlyAppRows, hourlyUnlockRows)
+        dao.saveDay(bucket.epochDay, appRows, unlockRow, hourlyRows, hourlyAppRows, hourlyUnlockRows, hourlySwitchRows)
     }
 
     private fun emptyDayBucket(epochDay: Long) = DayBucket(

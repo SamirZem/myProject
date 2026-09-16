@@ -24,6 +24,8 @@ data class DayBucket(
     val lastUnlockAtMs: Long?,
     /** Index 0..23, number of unlocks that happened in that hour-of-day. */
     val unlockHourly: IntArray = IntArray(24),
+    /** Index 0..23, number of times a (non-excluded) app moved to the foreground in that hour. */
+    val switchHourly: IntArray = IntArray(24),
 ) {
     val appCount: Int get() = perApp.size
 

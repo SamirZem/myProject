@@ -12,9 +12,10 @@ import androidx.room.RoomDatabase
         HourlyUsageEntity::class,
         HourlyAppUsageEntity::class,
         HourlyUnlockEntity::class,
+        HourlySwitchEntity::class,
         CollectedDayEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {

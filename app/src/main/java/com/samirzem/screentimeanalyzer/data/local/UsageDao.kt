@@ -25,6 +25,9 @@ interface UsageDao {
     suspend fun insertHourlyUnlock(rows: List<HourlyUnlockEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertHourlySwitch(rows: List<HourlySwitchEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun markCollected(row: CollectedDayEntity)
 
     @Query("SELECT epochDay FROM collected_day WHERE epochDay BETWEEN :startEpochDay AND :endEpochDay")
@@ -45,6 +48,9 @@ interface UsageDao {
     @Query("SELECT * FROM hourly_unlock WHERE epochDay BETWEEN :startEpochDay AND :endEpochDay")
     suspend fun hourlyUnlockIn(startEpochDay: Long, endEpochDay: Long): List<HourlyUnlockEntity>
 
+    @Query("SELECT * FROM hourly_switch WHERE epochDay BETWEEN :startEpochDay AND :endEpochDay")
+    suspend fun hourlySwitchIn(startEpochDay: Long, endEpochDay: Long): List<HourlySwitchEntity>
+
     @Transaction
     suspend fun saveDay(
         epochDay: Long,
@@ -53,12 +59,14 @@ interface UsageDao {
         hourly: List<HourlyUsageEntity>,
         hourlyApp: List<HourlyAppUsageEntity>,
         hourlyUnlock: List<HourlyUnlockEntity>,
+        hourlySwitch: List<HourlySwitchEntity>,
     ) {
         insertAppUsage(appUsage)
         insertUnlockSummary(unlockSummary)
         insertHourly(hourly)
         insertHourlyApp(hourlyApp)
         insertHourlyUnlock(hourlyUnlock)
+        insertHourlySwitch(hourlySwitch)
         markCollected(CollectedDayEntity(epochDay))
     }
 
@@ -73,6 +81,9 @@ interface UsageDao {
 
     @Query("DELETE FROM hourly_unlock WHERE epochDay < :beforeEpochDay")
     suspend fun pruneHourlyUnlockBefore(beforeEpochDay: Long)
+
+    @Query("DELETE FROM hourly_switch WHERE epochDay < :beforeEpochDay")
+    suspend fun pruneHourlySwitchBefore(beforeEpochDay: Long)
 
     @Query("DELETE FROM daily_unlock_summary WHERE epochDay < :beforeEpochDay")
     suspend fun pruneUnlockSummaryBefore(beforeEpochDay: Long)

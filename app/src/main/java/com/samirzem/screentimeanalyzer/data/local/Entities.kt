@@ -49,6 +49,14 @@ data class HourlyUnlockEntity(
     val count: Int,
 )
 
+/** How many times an app moved to the foreground in that hour - the "attention fragmentation" signal. */
+@Entity(tableName = "hourly_switch", primaryKeys = ["epochDay", "hour"])
+data class HourlySwitchEntity(
+    val epochDay: Long,
+    val hour: Int,
+    val count: Int,
+)
+
 /** Marks an epoch day as fully collected, so we know the cache for it is complete. */
 @Entity(tableName = "collected_day", primaryKeys = ["epochDay"])
 data class CollectedDayEntity(

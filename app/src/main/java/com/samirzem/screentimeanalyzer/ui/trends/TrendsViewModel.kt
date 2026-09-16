@@ -44,6 +44,11 @@ data class TrendsUiState(
     val timeOfDaySegments: List<TimeOfDaySegmentUi> = emptyList(),
     val insights: List<String> = emptyList(),
     val categoryBreakdown: List<CategoryUsageUi> = emptyList(),
+    val compulsiveApps: List<CompulsiveAppUi> = emptyList(),
+    val trendMovers: List<TrendMoverUi> = emptyList(),
+    val nightUsage: NightUsageUi? = null,
+    val anomalies: List<AnomalyDayUi> = emptyList(),
+    val switchHourly: LongArray = LongArray(24),
 )
 
 class TrendsViewModel(
@@ -70,6 +75,7 @@ class TrendsViewModel(
 
             val hourly = LongArray(24)
             val unlockHourly = LongArray(24)
+            val switchHourly = LongArray(24)
             val hourlyAppTotals = Array(24) { mutableMapOf<String, Long>() }
             val byWeekday = mutableMapOf<DayOfWeek, MutableList<Long>>()
 
@@ -77,6 +83,7 @@ class TrendsViewModel(
                 for (h in 0 until 24) {
                     hourly[h] += bucket.hourlyMs[h]
                     unlockHourly[h] += bucket.unlockHourly[h]
+                    switchHourly[h] += bucket.switchHourly[h]
                 }
                 for (stat in bucket.perApp) {
                     for (h in 0 until 24) {
@@ -146,6 +153,15 @@ class TrendsViewModel(
                 )
             }
 
+            val compulsiveApps = AdvancedAnalysis.compulsiveApps(buckets, appInfoResolver)
+            val nightUsage = AdvancedAnalysis.nightUsage(buckets, appInfoResolver)
+            val anomalies = AdvancedAnalysis.anomalies(buckets, appInfoResolver)
+            // Movers need a longer, period-independent baseline to be meaningful, so
+            // they're always computed over a trailing 28 days regardless of the
+            // selected period.
+            val trendBuckets = repository.getDayBuckets(today - (TREND_LOOKBACK_DAYS - 1), today)
+            val trendMovers = AdvancedAnalysis.trendMovers(trendBuckets, appInfoResolver)
+
             val insights = TrendsInsights.build(
                 period = period,
                 buckets = buckets,
@@ -174,6 +190,11 @@ class TrendsViewModel(
                 timeOfDaySegments = timeOfDaySegments,
                 insights = insights,
                 categoryBreakdown = categoryBreakdown,
+                compulsiveApps = compulsiveApps,
+                trendMovers = trendMovers,
+                nightUsage = nightUsage,
+                anomalies = anomalies,
+                switchHourly = switchHourly,
             )
         }
     }
@@ -187,6 +208,7 @@ class TrendsViewModel(
 
     private companion object {
         const val TOP_APPS_PER_BREAKDOWN = 5
+        const val TREND_LOOKBACK_DAYS = 28L
 
         val SEGMENTS = listOf(
             Segment("Nuit", "0h-6h", 0..5),

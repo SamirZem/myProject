@@ -64,6 +64,11 @@ class UsageAnalyticsEngine(context: Context) {
                         openSessions.clear()
                     }
                     openSessions[packageName] = event.timeStamp
+
+                    if (packageName !in EXCLUDED_USAGE_PACKAGES) {
+                        val zdt = Instant.ofEpochMilli(event.timeStamp).atZone(zoneId)
+                        dayFor(zdt.toLocalDate().toEpochDay()).switchHourly[zdt.hour]++
+                    }
                 }
 
                 UsageEvents.Event.MOVE_TO_BACKGROUND -> {
@@ -218,6 +223,7 @@ class UsageAnalyticsEngine(context: Context) {
         val apps = mutableMapOf<String, MutableAppAccumulator>()
         val hourlyMs = LongArray(24)
         val unlockHourly = IntArray(24)
+        val switchHourly = IntArray(24)
         var unlockCount: Int = 0
         var firstUnlockAtMs: Long? = null
         var lastUnlockAtMs: Long? = null
@@ -246,6 +252,7 @@ class UsageAnalyticsEngine(context: Context) {
                 firstUnlockAtMs = firstUnlockAtMs,
                 lastUnlockAtMs = lastUnlockAtMs,
                 unlockHourly = unlockHourly,
+                switchHourly = switchHourly,
             )
         }
     }

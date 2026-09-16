@@ -2,6 +2,7 @@ package com.samirzem.screentimeanalyzer.ui.trends
 
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,13 +35,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.samirzem.screentimeanalyzer.ui.LambdaViewModelFactory
 import com.samirzem.screentimeanalyzer.ui.common.AnalysisPeriod
+import com.samirzem.screentimeanalyzer.ui.components.AppIcon
 import com.samirzem.screentimeanalyzer.ui.components.AppUsageRow
 import com.samirzem.screentimeanalyzer.ui.components.CategoryBreakdown
 import com.samirzem.screentimeanalyzer.ui.components.DailyBarChart
@@ -47,6 +52,10 @@ import com.samirzem.screentimeanalyzer.ui.components.HourHeatmap
 import com.samirzem.screentimeanalyzer.ui.components.PeriodSelector
 import com.samirzem.screentimeanalyzer.ui.rememberApp
 import com.samirzem.screentimeanalyzer.ui.theme.SeriesColors
+import com.samirzem.screentimeanalyzer.ui.theme.TrendDownContainer
+import com.samirzem.screentimeanalyzer.ui.theme.TrendDownOnContainer
+import com.samirzem.screentimeanalyzer.ui.theme.TrendUpContainer
+import com.samirzem.screentimeanalyzer.ui.theme.TrendUpOnContainer
 import com.samirzem.screentimeanalyzer.util.Formatters
 import kotlinx.coroutines.launch
 
@@ -63,6 +72,7 @@ fun TrendsScreen(onAppClick: (String) -> Unit) {
     var selectedUnlockHour by remember { mutableStateOf<Int?>(null) }
     var selectedWeekday by remember { mutableStateOf<Int?>(null) }
     var expandedSegment by remember { mutableStateOf<Int?>(null) }
+    var selectedSwitchHour by remember { mutableStateOf<Int?>(null) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -224,6 +234,103 @@ fun TrendsScreen(onAppClick: (String) -> Unit) {
                 )
             }
         }
+
+        if (state.compulsiveApps.isNotEmpty()) {
+            item {
+                SectionCard(title = "Usage compulsif") {
+                    Text(
+                        "Apps ouvertes très souvent, mais à chaque fois très brièvement.",
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    state.compulsiveApps.forEachIndexed { index, compulsiveApp ->
+                        CompulsiveAppRow(compulsiveApp, accentColor = SeriesColors[index % SeriesColors.size])
+                    }
+                }
+            }
+        }
+
+        if (state.trendMovers.isNotEmpty()) {
+            item {
+                SectionCard(title = "Ça monte, ça descend (28 derniers jours)") {
+                    state.trendMovers.forEach { mover ->
+                        MoverRow(mover)
+                    }
+                }
+            }
+        }
+
+        state.nightUsage?.let { night ->
+            item {
+                SectionCard(title = "Sommeil") {
+                    Text(
+                        "${night.nightsWithUsage} soir${if (night.nightsWithUsage > 1) "s" else ""} sur " +
+                            "${night.totalNights} avec de l'activité entre 23h et 5h.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "En moyenne ${Formatters.duration(night.averageNightMs)} par nuit sur ce créneau.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    night.topApp?.let { app ->
+                        Spacer(Modifier.height(4.dp))
+                        Text("App la plus utilisée la nuit : ${app.label}", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+        }
+
+        if (state.anomalies.isNotEmpty()) {
+            item {
+                SectionCard(title = "Jours atypiques") {
+                    state.anomalies.forEachIndexed { index, day ->
+                        Column(Modifier.padding(vertical = 6.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(
+                                    day.dateLabel,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                Text(
+                                    "${Formatters.duration(day.totalMs)} (+${day.deltaPercent} %)",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                            day.topContributor?.let { app ->
+                                Text("Surtout à cause de : ${app.label}", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        if (index != state.anomalies.lastIndex) Spacer(Modifier.height(4.dp))
+                    }
+                }
+            }
+        }
+
+        item {
+            SectionCard(title = "Fragmentation de l'attention") {
+                Text(
+                    "Changements d'application par heure - un chiffre élevé traduit une attention dispersée.",
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                Spacer(Modifier.height(8.dp))
+                HourHeatmap(
+                    values = state.switchHourly,
+                    selectedHour = selectedSwitchHour,
+                    onHourClick = { hour -> selectedSwitchHour = if (selectedSwitchHour == hour) null else hour },
+                    valueFormatter = { "$it changements" },
+                )
+                SelectionDetail(
+                    text = selectedSwitchHour?.let { hour ->
+                        val count = state.switchHourly.getOrElse(hour) { 0 }
+                        "${hour}h-${hour + 1}h : $count changement${if (count > 1) "s" else ""} d'application"
+                    },
+                )
+            }
+        }
     }
 }
 
@@ -315,6 +422,62 @@ private fun TimeOfDaySegmentRow(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CompulsiveAppRow(app: CompulsiveAppUi, accentColor: Color) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AppIcon(app.info, modifier = Modifier.size(36.dp))
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = app.info.label,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                "${"%.0f".format(app.opensPerDay)} ouvertures/jour en moyenne",
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+        Text(
+            "${Formatters.duration(app.avgSessionMs)} / ouverture",
+            style = MaterialTheme.typography.bodySmall,
+            color = accentColor,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
+private fun MoverRow(mover: TrendMoverUi) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(mover.label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        val containerColor = if (mover.isRising) TrendUpContainer else TrendDownContainer
+        val onContainerColor = if (mover.isRising) TrendUpOnContainer else TrendDownOnContainer
+        Text(
+            text = "${if (mover.changePercent > 0) "+" else ""}${mover.changePercent} %",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = onContainerColor,
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(containerColor)
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+        )
     }
 }
 

@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,6 +25,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -37,6 +39,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -45,6 +48,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.samirzem.clashanalyzer.analyzer.CardDatabase
 import com.samirzem.clashanalyzer.capture.DeckScreenLayout
 import com.samirzem.clashanalyzer.capture.FrameAnalyzer
 import com.samirzem.clashanalyzer.capture.NormalizedRect
@@ -69,6 +73,10 @@ fun DeckImportScreen() {
     var selectedSlot by remember { mutableIntStateOf(0) }
     val cardNames = remember { mutableStateListOf("", "", "", "", "", "", "", "") }
     var status by remember { mutableStateOf<String?>(null) }
+    // Every known card name, searched against whatever templates the user has already captured
+    // (from a previous import or a previous live match) to suggest a slot's card. Nothing here
+    // relies on Supercell artwork — it's purely a lookup against the user's own past captures.
+    val allCardNames = remember { CardDatabase.all.map { it.name } }
 
     LaunchedEffect(Unit) {
         layout = ServiceLocator.deckScreenLayoutStore.layout.first()
@@ -76,8 +84,15 @@ fun DeckImportScreen() {
 
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
         if (uri != null) {
-            bitmap = decodeBitmap(uri, context)
+            val bmp = decodeBitmap(uri, context)
+            bitmap = bmp
             status = null
+            layout.cardRects.forEachIndexed { index, rect ->
+                if (cardNames[index].isBlank()) {
+                    val crop = FrameAnalyzer.cropHandSlot(bmp, rect)
+                    ServiceLocator.cardTemplateStore.match(crop, allCardNames)?.let { cardNames[index] = it }
+                }
+            }
         }
     }
 
@@ -131,12 +146,33 @@ fun DeckImportScreen() {
                 layout = layout.copy(cardRects = layout.cardRects.toMutableList().also { it[selectedSlot] = sanitized })
             }
 
-            CardNamePicker(
-                value = cardNames[selectedSlot],
-                onValueChange = { cardNames[selectedSlot] = it },
-                label = "Carte ${selectedSlot + 1} — tape pour filtrer",
-                modifier = Modifier.fillMaxWidth(),
+            Text(
+                "Une suggestion apparaît automatiquement si cette carte a déjà été capturée avant " +
+                    "(import précédent ou partie en direct) — vérifie-la avant de continuer, ce n'est qu'une proposition.",
+                style = MaterialTheme.typography.bodySmall,
             )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CardNamePicker(
+                    value = cardNames[selectedSlot],
+                    onValueChange = { cardNames[selectedSlot] = it },
+                    label = "Carte ${selectedSlot + 1} — tape pour filtrer",
+                    modifier = Modifier.weight(1f),
+                )
+                OutlinedButton(
+                    enabled = bitmap != null,
+                    onClick = {
+                        val bmp = bitmap ?: return@OutlinedButton
+                        val crop = FrameAnalyzer.cropHandSlot(bmp, layout.cardRects[selectedSlot])
+                        val suggestion = ServiceLocator.cardTemplateStore.match(crop, allCardNames)
+                        if (suggestion != null) {
+                            cardNames[selectedSlot] = suggestion
+                            status = null
+                        } else {
+                            status = "Aucune empreinte connue ne correspond à cette case — indique le nom toi-même."
+                        }
+                    },
+                ) { Text("Suggérer") }
+            }
 
             Button(
                 modifier = Modifier.fillMaxWidth(),

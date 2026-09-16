@@ -18,12 +18,10 @@ import com.samirzem.clashanalyzer.analyzer.model.UNKNOWN_CARD
 object CardDatabase {
 
     // French names are cross-checked against the official Clash Royale FR client's in-game names
-    // (via community wikis/guides, not read from any API — Supercell's API always returns English
-    // names regardless of the player's game language). A few very recent/obscure cards (Wall
-    // Breakers, Sparky, Golden Knight, Goblinstein) couldn't be confirmed and use a plausible
-    // guess instead — flag it if one of those looks wrong. Only used for display in pickers;
-    // every other part of the app (storage, deck matching, template lookup) keeps using the
-    // canonical English `name`.
+    // (via community wikis/guides and direct user confirmation, not read from any API —
+    // Supercell's API always returns English names regardless of the player's game language).
+    // Only used for display in pickers; every other part of the app (storage, deck matching,
+    // template lookup) keeps using the canonical English `name`.
     private val cards: Map<String, CardInfo> = listOf(
         // Win conditions
         CardInfo("Hog Rider", "Chevaucheur de Cochon", 4, CardType.TROOP, setOf(CardTag.WIN_CONDITION, CardTag.MINI_TANK)),
@@ -37,7 +35,7 @@ object CardDatabase {
         CardInfo("Mortar", "Mortier", 4, CardType.BUILDING, setOf(CardTag.WIN_CONDITION)),
         CardInfo("Miner", "Mineur", 3, CardType.TROOP, setOf(CardTag.WIN_CONDITION, CardTag.CYCLE)),
         CardInfo("Goblin Barrel", "Fût à Gobelins", 3, CardType.SPELL, setOf(CardTag.WIN_CONDITION, CardTag.CYCLE)),
-        CardInfo("Wall Breakers", "Casse-Murailles", 2, CardType.TROOP, setOf(CardTag.WIN_CONDITION, CardTag.CYCLE)),
+        CardInfo("Wall Breakers", "Sapeurs", 2, CardType.TROOP, setOf(CardTag.WIN_CONDITION, CardTag.CYCLE)),
         CardInfo("Ram Rider", "Cavabélier", 5, CardType.TROOP, setOf(CardTag.WIN_CONDITION, CardTag.MINI_TANK)),
         CardInfo("Battle Ram", "Bélier de Combat", 4, CardType.TROOP, setOf(CardTag.WIN_CONDITION, CardTag.MINI_TANK)),
         CardInfo("Elixir Golem", "Golem Élixir", 3, CardType.TROOP, setOf(CardTag.WIN_CONDITION, CardTag.TANK)),
@@ -97,7 +95,7 @@ object CardDatabase {
         CardInfo("Archers", "Archères", 3, CardType.TROOP, setOf(CardTag.ANTI_AIR, CardTag.RANGED_SUPPORT, CardTag.CYCLE)),
         CardInfo("Princess", "Princesse", 3, CardType.TROOP, setOf(CardTag.RANGED_SUPPORT, CardTag.SPLASH, CardTag.ANTI_AIR, CardTag.CYCLE)),
         CardInfo("Bowler", "Bouliste", 5, CardType.TROOP, setOf(CardTag.SPLASH)),
-        CardInfo("Sparky", "Sparky", 6, CardType.TROOP, setOf(CardTag.SPLASH)),
+        CardInfo("Sparky", "Zappy", 6, CardType.TROOP, setOf(CardTag.SPLASH)),
         CardInfo("Hunter", "Chasseur", 4, CardType.TROOP, setOf(CardTag.SPLASH)),
 
         // Tanks / mini tanks
@@ -148,7 +146,7 @@ object CardDatabase {
         CardInfo("Zappies", "Électrocuteurs", 4, CardType.TROOP, setOf(CardTag.ANTI_AIR, CardTag.RANGED_SUPPORT)),
         CardInfo("Night Witch", "Sorcière de la Nuit", 4, CardType.TROOP, setOf(CardTag.SWARM, CardTag.MINI_TANK)),
         CardInfo("Witch", "Sorcière", 5, CardType.TROOP, setOf(CardTag.SWARM, CardTag.SPLASH, CardTag.ANTI_AIR)),
-        CardInfo("Golden Knight", "Chevalier Doré", 4, CardType.TROOP, setOf(CardTag.MINI_TANK, CardTag.CYCLE)),
+        CardInfo("Golden Knight", "Chevalier d'Or", 4, CardType.TROOP, setOf(CardTag.MINI_TANK, CardTag.CYCLE)),
         CardInfo("Archer Queen", "Reine des Archers", 5, CardType.TROOP, setOf(CardTag.ANTI_AIR, CardTag.RANGED_SUPPORT)),
         CardInfo("Skeleton King", "Roi Squelette", 4, CardType.TROOP, setOf(CardTag.MINI_TANK)),
         CardInfo("Mighty Miner", "Maître Mineur", 4, CardType.TROOP, setOf(CardTag.MINI_TANK)),
@@ -156,7 +154,7 @@ object CardDatabase {
         CardInfo("Little Prince", "Petit Prince", 3, CardType.TROOP, setOf(CardTag.RANGED_SUPPORT, CardTag.ANTI_AIR)),
         CardInfo("Suspicious Bush", "Buisson Suspicieux", 3, CardType.TROOP, setOf(CardTag.CYCLE)),
         CardInfo("Goblin Machine", "Machine Gobeline", 5, CardType.TROOP, setOf(CardTag.MINI_TANK)),
-        CardInfo("Goblinstein", "Goblinstein", 5, CardType.TROOP, setOf(CardTag.SWARM)),
+        CardInfo("Goblinstein", "Gobelinstein", 5, CardType.TROOP, setOf(CardTag.SWARM)),
         CardInfo("Boss Bandit", "Cheffe des Voleuses", 5, CardType.TROOP, setOf(CardTag.MINI_TANK)),
         CardInfo("Berserker", "Berserker", 2, CardType.TROOP, setOf(CardTag.CYCLE)),
     ).associateBy { it.name }

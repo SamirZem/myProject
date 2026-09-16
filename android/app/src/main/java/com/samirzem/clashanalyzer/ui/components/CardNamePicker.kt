@@ -23,7 +23,6 @@ import com.samirzem.clashanalyzer.analyzer.CardDatabase
 import com.samirzem.clashanalyzer.analyzer.model.CardInfo
 
 private val allCards: List<CardInfo> by lazy { CardDatabase.all.sortedBy { it.frenchName } }
-private const val MAX_SUGGESTIONS = 8
 
 /** French display name for the given canonical (English/API) card name, falling back to the name itself. */
 private fun frenchNameOf(canonicalName: String): String =
@@ -48,13 +47,15 @@ private fun frenchNameOf(canonicalName: String): String =
 fun CardNamePicker(value: String, onValueChange: (String) -> Unit, label: String, modifier: Modifier = Modifier) {
     var expanded by remember { mutableStateOf(false) }
     var query by remember(value) { mutableStateOf(frenchNameOf(value).ifBlank { value }) }
+    // No cap on the match count: DropdownMenu already scrolls internally once its content
+    // exceeds the available screen height, so showing every match (not just the first few) is
+    // both correct and requires no extra scrolling setup here.
     val suggestions = remember(query) {
-        val matches = if (query.isBlank()) {
+        if (query.isBlank()) {
             allCards
         } else {
             allCards.filter { it.frenchName.contains(query, ignoreCase = true) || it.name.contains(query, ignoreCase = true) }
         }
-        matches.take(MAX_SUGGESTIONS)
     }
 
     Box(modifier = modifier) {

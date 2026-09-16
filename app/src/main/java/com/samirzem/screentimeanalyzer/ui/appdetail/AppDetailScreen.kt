@@ -39,6 +39,7 @@ import com.samirzem.screentimeanalyzer.ui.LambdaViewModelFactory
 import com.samirzem.screentimeanalyzer.ui.common.AnalysisPeriod
 import com.samirzem.screentimeanalyzer.ui.components.AppIcon
 import com.samirzem.screentimeanalyzer.ui.components.DailyBarChart
+import com.samirzem.screentimeanalyzer.ui.components.DayNavigator
 import com.samirzem.screentimeanalyzer.ui.components.HourHeatmap
 import com.samirzem.screentimeanalyzer.ui.components.PeriodSelector
 import com.samirzem.screentimeanalyzer.ui.rememberApp
@@ -137,21 +138,24 @@ fun AppDetailScreen(packageName: String, onBack: () -> Unit) {
             }
 
             item {
-                SectionCard(title = "Répartition sur la journée (${state.period.label} cumulés)") {
-                    Text(
-                        "Touche une heure pour voir le temps passé sur cette app à ce moment.",
-                        style = MaterialTheme.typography.labelSmall,
+                SectionCard(title = "Répartition sur la journée") {
+                    DayNavigator(
+                        selectedEpochDay = state.hourlyDayEpochDay,
+                        isToday = state.hourlyDayIsToday,
+                        onPreviousDay = viewModel::goToPreviousHourlyDay,
+                        onNextDay = viewModel::goToNextHourlyDay,
+                        onDaySelected = viewModel::selectHourlyDay,
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     HourHeatmap(
-                        values = state.hourlyMs,
+                        values = state.dayHourlyMs,
                         selectedHour = selectedHour,
                         onHourClick = { hour -> selectedHour = if (selectedHour == hour) null else hour },
                         valueFormatter = Formatters::duration,
                     )
                     DetailLine(
                         text = selectedHour?.let { hour ->
-                            "${hour}h-${hour + 1}h : ${Formatters.duration(state.hourlyMs.getOrElse(hour) { 0 })}"
+                            "${hour}h-${hour + 1}h : ${Formatters.duration(state.dayHourlyMs.getOrElse(hour) { 0 })}"
                         },
                     )
                 }

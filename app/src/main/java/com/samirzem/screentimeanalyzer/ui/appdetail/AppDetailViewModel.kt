@@ -29,9 +29,11 @@ data class AppDetailUiState(
     val averageSessionMs: Long = 0,
     val dailySeries: List<Long> = emptyList(),
     val dailyLabels: List<String> = emptyList(),
-    /** This app's foreground milliseconds per hour-of-day, summed over the selected period. */
-    val hourlyMs: LongArray = LongArray(24),
     val weekdayAverages: List<WeekdayAverageUi> = emptyList(),
+    /** Single day whose hour-by-hour breakdown is shown - independent of [period]. */
+    val hourlyDayEpochDay: Long = TimeUtils.todayEpochDay(),
+    val hourlyDayIsToday: Boolean = true,
+    val dayHourlyMs: LongArray = LongArray(24),
 )
 
 class AppDetailViewModel(
@@ -45,9 +47,29 @@ class AppDetailViewModel(
 
     init {
         load(AnalysisPeriod.WEEK)
+        loadHourlyDay(TimeUtils.todayEpochDay())
     }
 
     fun selectPeriod(period: AnalysisPeriod) = load(period)
+
+    fun selectHourlyDay(epochDay: Long) = loadHourlyDay(epochDay.coerceAtMost(TimeUtils.todayEpochDay()))
+
+    fun goToPreviousHourlyDay() = loadHourlyDay(_uiState.value.hourlyDayEpochDay - 1)
+
+    fun goToNextHourlyDay() =
+        loadHourlyDay((_uiState.value.hourlyDayEpochDay + 1).coerceAtMost(TimeUtils.todayEpochDay()))
+
+    private fun loadHourlyDay(epochDay: Long) {
+        viewModelScope.launch {
+            val bucket = repository.getDayBucket(epochDay)
+            val hourly = bucket.usageFor(packageName)?.hourlyMs ?: LongArray(24)
+            _uiState.value = _uiState.value.copy(
+                hourlyDayEpochDay = epochDay,
+                hourlyDayIsToday = epochDay == TimeUtils.todayEpochDay(),
+                dayHourlyMs = hourly,
+            )
+        }
+    }
 
     private fun load(period: AnalysisPeriod) {
         viewModelScope.launch {
@@ -65,11 +87,6 @@ class AppDetailViewModel(
             val averageSession = if (totalSessions > 0) totalTime / totalSessions else 0L
             val activeDays = perDay.count { it > 0 }.coerceAtLeast(1)
 
-            val hourly = LongArray(24)
-            for (stat in allStats) {
-                for (h in 0 until 24) hourly[h] += stat.hourlyMs[h]
-            }
-
             val byWeekday = mutableMapOf<DayOfWeek, MutableList<Long>>()
             for (bucket in buckets) {
                 val weekday = LocalDate.ofEpochDay(bucket.epochDay).dayOfWeek
@@ -84,7 +101,9 @@ class AppDetailViewModel(
                 )
             }
 
-            _uiState.value = AppDetailUiState(
+            // .copy() rather than a full replacement so the independently-loaded
+            // hourlyDay* fields above survive a period change.
+            _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 period = period,
                 info = appInfoResolver.resolve(packageName),
@@ -95,7 +114,6 @@ class AppDetailViewModel(
                 averageSessionMs = averageSession,
                 dailySeries = perDay,
                 dailyLabels = buckets.map { dayLabel(it.epochDay) },
-                hourlyMs = hourly,
                 weekdayAverages = weekdayAverages,
             )
         }

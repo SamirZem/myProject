@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,6 +18,7 @@ import com.samirzem.screentimeanalyzer.ui.LambdaViewModelFactory
 import com.samirzem.screentimeanalyzer.ui.components.AppUsageRow
 import com.samirzem.screentimeanalyzer.ui.components.PeriodSelector
 import com.samirzem.screentimeanalyzer.ui.rememberApp
+import com.samirzem.screentimeanalyzer.ui.theme.SeriesColors
 
 @Composable
 fun AppListScreen(onAppClick: (String) -> Unit) {
@@ -49,12 +50,13 @@ fun AppListScreen(onAppClick: (String) -> Unit) {
             item { Text("Aucune donnée pour cette période.") }
         }
 
-        items(state.rows, key = { it.info.packageName }) { row ->
+        itemsIndexed(state.rows, key = { _, row -> row.info.packageName }) { index, row ->
             AppUsageRow(
                 info = row.info,
                 totalTimeMs = row.totalTimeMs,
                 fraction = row.totalTimeMs.toFloat() / maxTotal,
                 subtitle = "${row.sessionCount} session" + if (row.sessionCount > 1) "s" else "",
+                accentColor = SeriesColors[index % SeriesColors.size],
                 onClick = { onAppClick(row.info.packageName) },
             )
         }

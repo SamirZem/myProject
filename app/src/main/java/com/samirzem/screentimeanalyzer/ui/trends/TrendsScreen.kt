@@ -35,6 +35,7 @@ import com.samirzem.screentimeanalyzer.ui.components.DailyBarChart
 import com.samirzem.screentimeanalyzer.ui.components.HourHeatmap
 import com.samirzem.screentimeanalyzer.ui.components.PeriodSelector
 import com.samirzem.screentimeanalyzer.ui.rememberApp
+import com.samirzem.screentimeanalyzer.ui.theme.SeriesColors
 import com.samirzem.screentimeanalyzer.util.Formatters
 
 @Composable
@@ -72,9 +73,13 @@ fun TrendsScreen() {
             item {
                 SectionCard(title = "Résumé") {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        state.insights.forEach { sentence ->
+                        state.insights.forEachIndexed { index, sentence ->
                             Row {
-                                Text("•  ", style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    "●  ",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = SeriesColors[index % SeriesColors.size],
+                                )
                                 Text(sentence, style = MaterialTheme.typography.bodyMedium)
                             }
                         }
@@ -225,11 +230,12 @@ private fun HourDetail(hour: Int?, totalMs: Long?, topApps: List<TopAppUsage>) {
             } else {
                 val maxMs = topApps.maxOf { it.totalTimeMs }
                 Column {
-                    topApps.forEach { app ->
+                    topApps.forEachIndexed { index, app ->
                         AppUsageRow(
                             info = app.info,
                             totalTimeMs = app.totalTimeMs,
                             fraction = app.totalTimeMs.toFloat() / maxMs,
+                            accentColor = SeriesColors[index % SeriesColors.size],
                         )
                     }
                 }
@@ -271,11 +277,12 @@ private fun TimeOfDaySegmentRow(
                     Text("Aucun usage sur cette période.", style = MaterialTheme.typography.labelSmall)
                 } else {
                     val maxMs = segment.topApps.maxOf { it.totalTimeMs }
-                    segment.topApps.forEach { app ->
+                    segment.topApps.forEachIndexed { index, app ->
                         AppUsageRow(
                             info = app.info,
                             totalTimeMs = app.totalTimeMs,
                             fraction = app.totalTimeMs.toFloat() / maxMs,
+                            accentColor = SeriesColors[index % SeriesColors.size],
                         )
                     }
                 }

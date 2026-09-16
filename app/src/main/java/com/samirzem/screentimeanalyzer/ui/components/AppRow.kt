@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -54,6 +55,7 @@ fun AppUsageRow(
     totalTimeMs: Long,
     fraction: Float,
     subtitle: String? = null,
+    accentColor: Color? = null,
     onClick: (() -> Unit)? = null,
 ) {
     Row(
@@ -75,6 +77,7 @@ fun AppUsageRow(
             Spacer(Modifier.height(4.dp))
             LinearProgressIndicator(
                 progress = { fraction.coerceIn(0f, 1f) },
+                color = accentColor ?: MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp)

@@ -25,6 +25,9 @@ data class DashboardUiState(
     val topApps: List<AppRowUi> = emptyList(),
     val topAppsMaxMs: Long = 1,
     val appCountDay: Int = 0,
+    /** This day's foreground milliseconds per hour-of-day, all apps combined. */
+    val dayHourlyMs: LongArray = LongArray(24),
+    val hourlyTopApps: Map<Int, List<AppRowUi>> = emptyMap(),
 )
 
 class DashboardViewModel(
@@ -67,6 +70,14 @@ class DashboardViewModel(
                 AppRowUi(appInfoResolver.resolve(stat.packageName), stat.totalTimeMs)
             }
 
+            val hourlyTopApps = (0 until 24).associateWith { hour ->
+                dayBucket.perApp
+                    .filter { it.hourlyMs[hour] > 0 }
+                    .sortedByDescending { it.hourlyMs[hour] }
+                    .take(TOP_APPS_COUNT)
+                    .map { AppRowUi(appInfoResolver.resolve(it.packageName), it.hourlyMs[hour]) }
+            }
+
             _uiState.value = DashboardUiState(
                 isLoading = false,
                 selectedEpochDay = epochDay,
@@ -79,6 +90,8 @@ class DashboardViewModel(
                 topApps = topApps,
                 topAppsMaxMs = topApps.maxOfOrNull { it.totalTimeMs } ?: 1L,
                 appCountDay = dayBucket.appCount,
+                dayHourlyMs = dayBucket.hourlyMs,
+                hourlyTopApps = hourlyTopApps,
             )
         }
     }

@@ -21,8 +21,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.samirzem.screentimeanalyzer.ui.theme.Amber
+import com.samirzem.screentimeanalyzer.ui.theme.Coral
+import com.samirzem.screentimeanalyzer.ui.theme.Teal
 
 /** A minimal bottom-aligned bar chart, one bar per entry in [values]. Tap a bar via [onBarClick]. */
 @Composable
@@ -87,8 +91,7 @@ fun HourHeatmap(
     valueFormatter: (Long) -> String = { it.toString() },
 ) {
     val maxValue = (values.maxOrNull() ?: 0L).coerceAtLeast(1L)
-    val baseColor = MaterialTheme.colorScheme.primary
-    val selectionColor = MaterialTheme.colorScheme.secondary
+    val selectionColor = MaterialTheme.colorScheme.onSurface
     Column(modifier = modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth()) {
             for (hour in 0 until 24) {
@@ -100,7 +103,7 @@ fun HourHeatmap(
                         .aspectRatio(0.55f)
                         .padding(1.dp)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(baseColor.copy(alpha = 0.08f + intensity * 0.85f))
+                        .background(heatColor(intensity))
                         .let { m ->
                             if (isSelected) {
                                 m.border(2.dp, selectionColor, RoundedCornerShape(3.dp))
@@ -130,13 +133,20 @@ fun HourHeatmap(
                     .padding(horizontal = 8.dp)
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(baseColor.copy(alpha = 0.08f), baseColor),
-                        ),
-                    ),
+                    .background(Brush.horizontalGradient(listOf(Teal, Amber, Coral))),
             )
             Text("Élevé (${valueFormatter(maxValue)})", style = MaterialTheme.typography.labelSmall)
         }
     }
+}
+
+/** Cool-to-warm heat scale (teal -> amber -> coral) instead of a single tinted hue. */
+private fun heatColor(intensity: Float): Color {
+    val clamped = intensity.coerceIn(0f, 1f)
+    val hue = if (clamped <= 0.5f) {
+        lerp(Teal, Amber, clamped / 0.5f)
+    } else {
+        lerp(Amber, Coral, (clamped - 0.5f) / 0.5f)
+    }
+    return hue.copy(alpha = 0.22f + clamped * 0.78f)
 }

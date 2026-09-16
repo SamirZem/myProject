@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.samirzem.screentimeanalyzer.ui.LambdaViewModelFactory
 import com.samirzem.screentimeanalyzer.ui.components.AppUsageRow
+import com.samirzem.screentimeanalyzer.ui.components.CategoryBreakdown
 import com.samirzem.screentimeanalyzer.ui.components.DayNavigator
 import com.samirzem.screentimeanalyzer.ui.components.HourHeatmap
 import com.samirzem.screentimeanalyzer.ui.rememberApp
@@ -64,6 +65,7 @@ fun DashboardScreen(onAppClick: (String) -> Unit, onSeeAllClick: () -> Unit) {
     )
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedHour by remember { mutableStateOf<Int?>(null) }
+    var selectedUnlockHour by remember { mutableStateOf<Int?>(null) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -165,6 +167,37 @@ fun DashboardScreen(onAppClick: (String) -> Unit, onSeeAllClick: () -> Unit) {
                             }
                         }
                     }
+                }
+            }
+        }
+
+        item {
+            SectionCard(title = "Déverrouillages sur la journée") {
+                HourHeatmap(
+                    values = state.unlockHourlyMs,
+                    selectedHour = selectedUnlockHour,
+                    onHourClick = { hour -> selectedUnlockHour = if (selectedUnlockHour == hour) null else hour },
+                    valueFormatter = { "$it déverrouillages" },
+                )
+                AnimatedVisibility(visible = selectedUnlockHour != null) {
+                    val hour = selectedUnlockHour ?: 0
+                    val count = state.unlockHourlyMs.getOrElse(hour) { 0 }
+                    Column {
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            "${hour}h-${hour + 1}h : $count déverrouillage${if (count > 1) "s" else ""}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
+        }
+
+        if (state.categoryBreakdown.isNotEmpty()) {
+            item {
+                SectionCard(title = "Par catégorie") {
+                    CategoryBreakdown(state.categoryBreakdown, onAppClick = onAppClick)
                 }
             }
         }

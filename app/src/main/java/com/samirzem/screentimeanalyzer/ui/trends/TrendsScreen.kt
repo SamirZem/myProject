@@ -2,23 +2,18 @@ package com.samirzem.screentimeanalyzer.ui.trends
 
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
@@ -46,6 +41,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.samirzem.screentimeanalyzer.ui.LambdaViewModelFactory
 import com.samirzem.screentimeanalyzer.ui.common.AnalysisPeriod
 import com.samirzem.screentimeanalyzer.ui.components.AppUsageRow
+import com.samirzem.screentimeanalyzer.ui.components.CategoryBreakdown
 import com.samirzem.screentimeanalyzer.ui.components.DailyBarChart
 import com.samirzem.screentimeanalyzer.ui.components.HourHeatmap
 import com.samirzem.screentimeanalyzer.ui.components.PeriodSelector
@@ -55,7 +51,7 @@ import com.samirzem.screentimeanalyzer.util.Formatters
 import kotlinx.coroutines.launch
 
 @Composable
-fun TrendsScreen() {
+fun TrendsScreen(onAppClick: (String) -> Unit) {
     val app = rememberApp()
     val viewModel: TrendsViewModel = viewModel(
         factory = LambdaViewModelFactory { TrendsViewModel(app.repository, app.appInfoResolver) },
@@ -114,7 +110,7 @@ fun TrendsScreen() {
         if (state.categoryBreakdown.isNotEmpty()) {
             item {
                 SectionCard(title = "Par catégorie") {
-                    CategoryBreakdown(state.categoryBreakdown)
+                    CategoryBreakdown(state.categoryBreakdown, onAppClick = onAppClick)
                 }
             }
         }
@@ -329,61 +325,6 @@ private fun SectionCard(title: String, content: @Composable () -> Unit) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(12.dp))
             content()
-        }
-    }
-}
-
-@Composable
-private fun CategoryBreakdown(categories: List<CategoryUsageUi>) {
-    val total = categories.sumOf { it.totalMs }.coerceAtLeast(1L)
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(14.dp)
-                .clip(RoundedCornerShape(7.dp)),
-        ) {
-            categories.forEachIndexed { index, category ->
-                val weight = (category.totalMs.toFloat() / total).coerceAtLeast(0.01f)
-                Box(
-                    modifier = Modifier
-                        .weight(weight)
-                        .fillMaxHeight()
-                        .background(SeriesColors[index % SeriesColors.size]),
-                )
-            }
-        }
-        Spacer(Modifier.height(14.dp))
-        categories.forEachIndexed { index, category ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(SeriesColors[index % SeriesColors.size]),
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = category.label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = "${(category.totalMs * 100 / total)} %",
-                    style = MaterialTheme.typography.labelSmall,
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = Formatters.duration(category.totalMs),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
         }
     }
 }

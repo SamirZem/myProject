@@ -1,6 +1,7 @@
 package com.samirzem.screentimeanalyzer.ui.appdetail
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,16 +14,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.samirzem.screentimeanalyzer.data.AppInfoResolver
 import com.samirzem.screentimeanalyzer.ui.LambdaViewModelFactory
 import com.samirzem.screentimeanalyzer.ui.common.AnalysisPeriod
 import com.samirzem.screentimeanalyzer.ui.components.AppIcon
@@ -59,6 +67,7 @@ fun AppDetailScreen(packageName: String, onBack: () -> Unit) {
     var selectedDay by remember { mutableStateOf<Int?>(null) }
     var selectedHour by remember { mutableStateOf<Int?>(null) }
     var selectedWeekday by remember { mutableStateOf<Int?>(null) }
+    var showCategoryPicker by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -86,7 +95,19 @@ fun AppDetailScreen(packageName: String, onBack: () -> Unit) {
                         Spacer(Modifier.width(16.dp))
                         Column {
                             Text(info.label, style = MaterialTheme.typography.titleLarge)
-                            Text(info.category, style = MaterialTheme.typography.bodyMedium)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { showCategoryPicker = true },
+                            ) {
+                                Text(info.category, style = MaterialTheme.typography.bodyMedium)
+                                Spacer(Modifier.width(4.dp))
+                                Icon(
+                                    Icons.Filled.Edit,
+                                    contentDescription = "Changer la catégorie",
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
@@ -177,7 +198,44 @@ fun AppDetailScreen(packageName: String, onBack: () -> Unit) {
                 }
             }
         }
+
+        if (showCategoryPicker) {
+            CategoryPickerDialog(
+                current = state.info?.category,
+                onSelect = { category ->
+                    viewModel.changeCategory(category)
+                    showCategoryPicker = false
+                },
+                onDismiss = { showCategoryPicker = false },
+            )
+        }
     }
+}
+
+@Composable
+private fun CategoryPickerDialog(current: String?, onSelect: (String) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Changer la catégorie") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                AppInfoResolver.CATEGORIES.forEach { category ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(category) },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = category == current, onClick = { onSelect(category) })
+                        Text(category, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Fermer") }
+        },
+    )
 }
 
 @Composable

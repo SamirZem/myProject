@@ -21,6 +21,7 @@ data class ResolvedAppInfo(
 class AppInfoResolver(context: Context) {
 
     private val packageManager = context.applicationContext.packageManager
+    private val overrides = CategoryOverrideStore(context)
     private val cache = LruCache<String, ResolvedAppInfo>(256)
 
     fun resolve(packageName: String): ResolvedAppInfo {
@@ -36,19 +37,25 @@ class AppInfoResolver(context: Context) {
                 } catch (e: PackageManager.NameNotFoundException) {
                     null
                 },
-                category = categoryLabel(appInfo),
+                category = overrides.get(packageName) ?: categoryLabel(appInfo),
             )
         } catch (e: PackageManager.NameNotFoundException) {
             ResolvedAppInfo(
                 packageName = packageName,
                 label = packageName.substringAfterLast('.'),
                 icon = null,
-                category = "Autre",
+                category = overrides.get(packageName) ?: "Autre",
             )
         }
 
         cache.put(packageName, resolved)
         return resolved
+    }
+
+    /** Manually reassigns [packageName]'s category, overriding whatever the system reports. */
+    fun setCategoryOverride(packageName: String, category: String) {
+        overrides.set(packageName, category)
+        cache.remove(packageName)
     }
 
     private fun categoryLabel(appInfo: ApplicationInfo): String = when (appInfo.category) {
@@ -62,5 +69,25 @@ class AppInfoResolver(context: Context) {
         ApplicationInfo.CATEGORY_PRODUCTIVITY -> "Productivité"
         ApplicationInfo.CATEGORY_ACCESSIBILITY -> "Accessibilité"
         else -> "Autre"
+    }
+
+    companion object {
+        /** Choices offered when manually reassigning an app's category (system set + a few extras). */
+        val CATEGORIES = listOf(
+            "Réseaux sociaux",
+            "Jeux",
+            "Musique et audio",
+            "Vidéo",
+            "Photo",
+            "Actualités",
+            "Cartes et navigation",
+            "Productivité",
+            "Communication",
+            "Achats",
+            "Santé et fitness",
+            "Finance",
+            "Accessibilité",
+            "Autre",
+        )
     }
 }

@@ -120,7 +120,7 @@ fun ScreenTimeApp() {
                 AppListScreen(onAppClick = { pkg -> navController.navigate(Routes.appDetail(pkg)) })
             }
             composable(Routes.TRENDS) {
-                TrendsScreen()
+                TrendsScreen(onAppClick = { pkg -> navController.navigate(Routes.appDetail(pkg)) })
             }
             composable(Routes.APP_DETAIL) { entry ->
                 val packageName = entry.arguments?.getString("packageName").orEmpty()

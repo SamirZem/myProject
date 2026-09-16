@@ -52,6 +52,11 @@ class AppDetailViewModel(
 
     fun selectPeriod(period: AnalysisPeriod) = load(period)
 
+    fun changeCategory(category: String) {
+        appInfoResolver.setCategoryOverride(packageName, category)
+        _uiState.value = _uiState.value.copy(info = appInfoResolver.resolve(packageName))
+    }
+
     fun selectHourlyDay(epochDay: Long) = loadHourlyDay(epochDay.coerceAtMost(TimeUtils.todayEpochDay()))
 
     fun goToPreviousHourlyDay() = loadHourlyDay(_uiState.value.hourlyDayEpochDay - 1)

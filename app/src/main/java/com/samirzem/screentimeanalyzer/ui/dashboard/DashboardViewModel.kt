@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.samirzem.screentimeanalyzer.data.AppInfoResolver
 import com.samirzem.screentimeanalyzer.data.ResolvedAppInfo
 import com.samirzem.screentimeanalyzer.data.ScreenTimeRepository
+import com.samirzem.screentimeanalyzer.ui.components.CategoryTopApp
+import com.samirzem.screentimeanalyzer.ui.components.CategoryUsageUi
 import com.samirzem.screentimeanalyzer.util.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +30,8 @@ data class DashboardUiState(
     /** This day's foreground milliseconds per hour-of-day, all apps combined. */
     val dayHourlyMs: LongArray = LongArray(24),
     val hourlyTopApps: Map<Int, List<AppRowUi>> = emptyMap(),
+    val unlockHourlyMs: LongArray = LongArray(24),
+    val categoryBreakdown: List<CategoryUsageUi> = emptyList(),
 )
 
 class DashboardViewModel(
@@ -78,6 +82,26 @@ class DashboardViewModel(
                     .map { AppRowUi(appInfoResolver.resolve(it.packageName), it.hourlyMs[hour]) }
             }
 
+            val categoryTotals = mutableMapOf<String, Long>()
+            val categoryAppTotals = mutableMapOf<String, MutableMap<String, Long>>()
+            for (stat in dayBucket.perApp) {
+                val category = appInfoResolver.resolve(stat.packageName).category
+                categoryTotals[category] = (categoryTotals[category] ?: 0L) + stat.totalTimeMs
+                val appTotals = categoryAppTotals.getOrPut(category) { mutableMapOf() }
+                appTotals[stat.packageName] = (appTotals[stat.packageName] ?: 0L) + stat.totalTimeMs
+            }
+            val categoryBreakdown = categoryTotals.entries
+                .sortedByDescending { it.value }
+                .map { (label, ms) ->
+                    val categoryTopApps = categoryAppTotals[label].orEmpty().entries
+                        .sortedByDescending { it.value }
+                        .take(TOP_APPS_COUNT)
+                        .map { (pkg, appMs) -> CategoryTopApp(appInfoResolver.resolve(pkg), appMs) }
+                    CategoryUsageUi(label, ms, categoryTopApps)
+                }
+
+            val unlockHourlyMs = LongArray(24) { dayBucket.unlockHourly[it].toLong() }
+
             _uiState.value = DashboardUiState(
                 isLoading = false,
                 selectedEpochDay = epochDay,
@@ -92,6 +116,8 @@ class DashboardViewModel(
                 appCountDay = dayBucket.appCount,
                 dayHourlyMs = dayBucket.hourlyMs,
                 hourlyTopApps = hourlyTopApps,
+                unlockHourlyMs = unlockHourlyMs,
+                categoryBreakdown = categoryBreakdown,
             )
         }
     }

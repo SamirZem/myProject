@@ -6,6 +6,8 @@ import com.samirzem.screentimeanalyzer.data.AppInfoResolver
 import com.samirzem.screentimeanalyzer.data.ResolvedAppInfo
 import com.samirzem.screentimeanalyzer.data.ScreenTimeRepository
 import com.samirzem.screentimeanalyzer.ui.common.AnalysisPeriod
+import com.samirzem.screentimeanalyzer.ui.components.CategoryTopApp
+import com.samirzem.screentimeanalyzer.ui.components.CategoryUsageUi
 import com.samirzem.screentimeanalyzer.util.TimeUtils
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -27,8 +29,6 @@ data class TimeOfDaySegmentUi(
     val totalMs: Long,
     val topApps: List<TopAppUsage>,
 )
-
-data class CategoryUsageUi(val label: String, val totalMs: Long)
 
 data class TrendsUiState(
     val isLoading: Boolean = true,
@@ -107,15 +107,24 @@ class TrendsViewModel(
             }
 
             val categoryTotals = mutableMapOf<String, Long>()
+            val categoryAppTotals = mutableMapOf<String, MutableMap<String, Long>>()
             for (bucket in buckets) {
                 for (stat in bucket.perApp) {
                     val category = appInfoResolver.resolve(stat.packageName).category
                     categoryTotals[category] = (categoryTotals[category] ?: 0L) + stat.totalTimeMs
+                    val appTotals = categoryAppTotals.getOrPut(category) { mutableMapOf() }
+                    appTotals[stat.packageName] = (appTotals[stat.packageName] ?: 0L) + stat.totalTimeMs
                 }
             }
             val categoryBreakdown = categoryTotals.entries
                 .sortedByDescending { it.value }
-                .map { (label, ms) -> CategoryUsageUi(label, ms) }
+                .map { (label, ms) ->
+                    val topApps = categoryAppTotals[label].orEmpty().entries
+                        .sortedByDescending { it.value }
+                        .take(TOP_APPS_PER_BREAKDOWN)
+                        .map { (pkg, appMs) -> CategoryTopApp(appInfoResolver.resolve(pkg), appMs) }
+                    CategoryUsageUi(label, ms, topApps)
+                }
 
             val lastWeek = buckets.takeLast(7)
 

@@ -51,11 +51,17 @@ class UsageAnalyticsEngine(context: Context) {
             when (event.eventType) {
                 UsageEvents.Event.MOVE_TO_FOREGROUND -> {
                     val packageName = event.packageName ?: continue
-                    // A stray extra MOVE_TO_FOREGROUND for a package that's already
-                    // "open" means we missed its MOVE_TO_BACKGROUND - close that
-                    // session out here instead of silently discarding its time.
-                    openSessions[packageName]?.let { previousStart ->
-                        recordSession(::dayFor, packageName, previousStart, event.timeStamp, startMs, endMs, screenState)
+                    // Only one app is genuinely foregrounded at a time. Anything still
+                    // marked "open" here (same package included, on a stray repeat
+                    // event) means its MOVE_TO_BACKGROUND was missed - close every such
+                    // session out right now instead of leaving it open until it
+                    // resurfaces (possibly hours later) or the query window ends, which
+                    // is what let totals balloon to hours for an app barely touched.
+                    if (openSessions.isNotEmpty()) {
+                        for ((strayPackage, strayStart) in openSessions) {
+                            recordSession(::dayFor, strayPackage, strayStart, event.timeStamp, startMs, endMs, screenState)
+                        }
+                        openSessions.clear()
                     }
                     openSessions[packageName] = event.timeStamp
                 }

@@ -204,7 +204,13 @@ fun DeckImportScreen() {
 
 private fun decodeBitmap(uri: Uri, context: Context): Bitmap {
     val source = ImageDecoder.createSource(context.contentResolver, uri)
-    return ImageDecoder.decodeBitmap(source)
+    // Without forcing a software allocator, ImageDecoder defaults to a HARDWARE-config bitmap on
+    // modern Android — which crashes with IllegalStateException the moment anything here calls
+    // getPixel() (color sampling, card-crop fingerprinting), since hardware bitmaps only support
+    // being drawn, not read back on the CPU.
+    return ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+    }
 }
 
 @Composable

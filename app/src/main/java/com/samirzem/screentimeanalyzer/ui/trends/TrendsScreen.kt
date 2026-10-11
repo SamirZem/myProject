@@ -270,9 +270,9 @@ fun TrendsScreen(onAppClick: (String) -> Unit) {
                             fontWeight = FontWeight.Bold,
                         )
                         Text(
-                            "Dernier déverrouillage du soir -> premier du matin, moins 20 min pour s'endormir. " +
-                                "${night.sleepNights.size} nuit${if (night.sleepNights.size > 1) "s" else ""} estimée" +
-                                "${if (night.sleepNights.size > 1) "s" else ""} sur ${night.totalNights}.",
+                            "Dernier déverrouillage avant 6h -> premier après 6h, moins 20 min pour s'endormir " +
+                                "(minimum 4h). ${night.sleepNights.size} nuit${if (night.sleepNights.size > 1) "s" else ""} " +
+                                "estimée${if (night.sleepNights.size > 1) "s" else ""} sur ${night.totalNights}.",
                             style = MaterialTheme.typography.labelSmall,
                         )
                         Spacer(Modifier.height(10.dp))
@@ -297,8 +297,8 @@ fun TrendsScreen(onAppClick: (String) -> Unit) {
                         Spacer(Modifier.height(10.dp))
                     } else {
                         Text(
-                            "Pas assez de nuits avec un dernier déverrouillage le soir et un premier le matin " +
-                                "pour estimer ton temps de sommeil.",
+                            "Pas assez de nuits avec un écart d'au moins 4h entre un dernier déverrouillage " +
+                                "avant 6h et un premier après 6h pour estimer ton temps de sommeil.",
                             style = MaterialTheme.typography.labelSmall,
                         )
                         Spacer(Modifier.height(10.dp))

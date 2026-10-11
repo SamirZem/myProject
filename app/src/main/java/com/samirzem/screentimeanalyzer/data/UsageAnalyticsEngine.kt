@@ -88,6 +88,18 @@ class UsageAnalyticsEngine(context: Context) {
                     if (bucket.lastUnlockAtMs == null || event.timeStamp > bucket.lastUnlockAtMs!!) {
                         bucket.lastUnlockAtMs = event.timeStamp
                     }
+                    // Tracked separately from firstUnlockAtMs/lastUnlockAtMs so the sleep
+                    // estimate can use 6am (not midnight) as the day boundary: an unlock
+                    // just after midnight is still "last night", not "this morning".
+                    if (zdt.hour < SIX_AM_HOUR) {
+                        if (bucket.lastUnlockBeforeSixAtMs == null || event.timeStamp > bucket.lastUnlockBeforeSixAtMs!!) {
+                            bucket.lastUnlockBeforeSixAtMs = event.timeStamp
+                        }
+                    } else {
+                        if (bucket.firstUnlockAfterSixAtMs == null || event.timeStamp < bucket.firstUnlockAfterSixAtMs!!) {
+                            bucket.firstUnlockAfterSixAtMs = event.timeStamp
+                        }
+                    }
                 }
 
                 UsageEvents.Event.SCREEN_NON_INTERACTIVE -> screenState.onScreenOff(event.timeStamp)
@@ -227,6 +239,8 @@ class UsageAnalyticsEngine(context: Context) {
         var unlockCount: Int = 0
         var firstUnlockAtMs: Long? = null
         var lastUnlockAtMs: Long? = null
+        var lastUnlockBeforeSixAtMs: Long? = null
+        var firstUnlockAfterSixAtMs: Long? = null
 
         fun appAccumulator(packageName: String) = apps.getOrPut(packageName) { MutableAppAccumulator() }
 
@@ -251,6 +265,8 @@ class UsageAnalyticsEngine(context: Context) {
                 unlockCount = unlockCount,
                 firstUnlockAtMs = firstUnlockAtMs,
                 lastUnlockAtMs = lastUnlockAtMs,
+                lastUnlockBeforeSixAtMs = lastUnlockBeforeSixAtMs,
+                firstUnlockAfterSixAtMs = firstUnlockAfterSixAtMs,
                 unlockHourly = unlockHourly,
                 switchHourly = switchHourly,
             )
@@ -260,5 +276,6 @@ class UsageAnalyticsEngine(context: Context) {
     private companion object {
         const val ONE_HOUR_MS = 3_600_000L
         const val MAX_SESSION_DURATION_MS = 3 * 60 * 60 * 1000L
+        const val SIX_AM_HOUR = 6
     }
 }

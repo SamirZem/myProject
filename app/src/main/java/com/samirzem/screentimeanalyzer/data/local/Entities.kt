@@ -24,6 +24,10 @@ data class DailyUnlockSummaryEntity(
     val unlockCount: Int,
     val firstUnlockAtMs: Long?,
     val lastUnlockAtMs: Long?,
+    /** Latest unlock before 6am on this calendar day (hour 0-5) - the sleep estimate's bedtime candidate. */
+    val lastUnlockBeforeSixAtMs: Long?,
+    /** Earliest unlock at/after 6am on this calendar day - the sleep estimate's wake candidate. */
+    val firstUnlockAfterSixAtMs: Long?,
 )
 
 @Entity(tableName = "hourly_usage", primaryKeys = ["epochDay", "hour"])

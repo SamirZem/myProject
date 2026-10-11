@@ -4,8 +4,6 @@ import com.samirzem.screentimeanalyzer.data.AppInfoResolver
 import com.samirzem.screentimeanalyzer.data.DayBucket
 import com.samirzem.screentimeanalyzer.data.ResolvedAppInfo
 import com.samirzem.screentimeanalyzer.util.Formatters
-import com.samirzem.screentimeanalyzer.util.TimeUtils
-import java.time.Instant
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -109,31 +107,30 @@ object AdvancedAnalysis {
     }
 
     /**
-     * Estimates sleep duration per night from unlock timestamps alone: the gap between
-     * the last unlock of one day and the first unlock of the next, minus a fixed buffer
-     * for the time between putting the phone down and actually falling asleep. Only
-     * counts nights where that last unlock falls in the evening and the next first
-     * unlock falls in the morning - otherwise the gap isn't a reliable bedtime/wake pair
-     * (e.g. the phone simply wasn't touched for a stretch during the day).
+     * Estimates sleep duration per night using 6am (not midnight) as the day boundary:
+     * bedtime is the last unlock before 6am (an unlock just after midnight still counts
+     * as "last night", via [DayBucket.lastUnlockBeforeSixAtMs], falling back to the
+     * previous day's last unlock when there was none); wake is the first unlock at or
+     * after 6am. The gap, minus a 20-minute fall-asleep buffer, only counts as a night
+     * if it's at least 4 hours - short enough gaps are more likely a nap or a lull in
+     * phone use than an actual night's sleep.
      */
     private fun estimateSleepNights(buckets: List<DayBucket>): List<SleepNightUi> {
         val sorted = buckets.sortedBy { it.epochDay }
         val nights = mutableListOf<SleepNightUi>()
-        for (i in 0 until sorted.size - 1) {
+        for (i in 1 until sorted.size) {
+            val previousDay = sorted[i - 1]
             val day = sorted[i]
-            val nextDay = sorted[i + 1]
-            if (nextDay.epochDay != day.epochDay + 1) continue
+            if (day.epochDay != previousDay.epochDay + 1) continue
 
-            val bedtime = day.lastUnlockAtMs ?: continue
-            val wake = nextDay.firstUnlockAtMs ?: continue
-            if (hourOf(bedtime) < BEDTIME_MIN_HOUR) continue
-            if (hourOf(wake) >= WAKE_MAX_HOUR) continue
+            val bedtime = day.lastUnlockBeforeSixAtMs ?: previousDay.lastUnlockAtMs ?: continue
+            val wake = day.firstUnlockAfterSixAtMs ?: continue
 
             val durationMs = (wake - bedtime - SLEEP_BUFFER_MS).coerceAtLeast(0)
-            if (durationMs <= 0) continue
+            if (durationMs < MIN_SLEEP_DURATION_MS) continue
 
             nights += SleepNightUi(
-                dateLabel = LocalDate.ofEpochDay(nextDay.epochDay).format(dateFormatter)
+                dateLabel = LocalDate.ofEpochDay(day.epochDay).format(dateFormatter)
                     .replaceFirstChar { it.uppercase() },
                 durationMs = durationMs,
                 bedtimeLabel = Formatters.clockTime(bedtime),
@@ -142,8 +139,6 @@ object AdvancedAnalysis {
         }
         return nights
     }
-
-    private fun hourOf(epochMs: Long): Int = Instant.ofEpochMilli(epochMs).atZone(TimeUtils.zoneId).hour
 
     fun anomalies(buckets: List<DayBucket>, appInfoResolver: AppInfoResolver): List<AnomalyDayUi> {
         val withData = buckets.filter { it.totalScreenTimeMs > 0 }
@@ -243,8 +238,7 @@ object AdvancedAnalysis {
     private const val MAX_AVG_SESSION_MS = 90_000L
     private const val NIGHT_USAGE_THRESHOLD_MS = 5 * 60_000L
     private const val SLEEP_BUFFER_MS = 20 * 60_000L
-    private const val BEDTIME_MIN_HOUR = 18
-    private const val WAKE_MAX_HOUR = 12
+    private const val MIN_SLEEP_DURATION_MS = 4 * 60 * 60_000L
     private const val MIN_DAYS_FOR_ANOMALY = 5
     private const val ANOMALY_Z_THRESHOLD = 1.3
     private const val MIN_DAYS_FOR_TREND = 14

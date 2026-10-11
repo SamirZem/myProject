@@ -132,6 +132,8 @@ class ScreenTimeRepository(
                 unlockCount = unlock?.unlockCount ?: 0,
                 firstUnlockAtMs = unlock?.firstUnlockAtMs,
                 lastUnlockAtMs = unlock?.lastUnlockAtMs,
+                lastUnlockBeforeSixAtMs = unlock?.lastUnlockBeforeSixAtMs,
+                firstUnlockAfterSixAtMs = unlock?.firstUnlockAfterSixAtMs,
                 unlockHourly = unlockHourly,
                 switchHourly = switchHourly,
             )
@@ -171,6 +173,8 @@ class ScreenTimeRepository(
             unlockCount = bucket.unlockCount,
             firstUnlockAtMs = bucket.firstUnlockAtMs,
             lastUnlockAtMs = bucket.lastUnlockAtMs,
+            lastUnlockBeforeSixAtMs = bucket.lastUnlockBeforeSixAtMs,
+            firstUnlockAfterSixAtMs = bucket.firstUnlockAfterSixAtMs,
         )
         dao.saveDay(bucket.epochDay, appRows, unlockRow, hourlyRows, hourlyAppRows, hourlyUnlockRows, hourlySwitchRows)
     }

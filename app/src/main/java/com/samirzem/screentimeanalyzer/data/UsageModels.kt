@@ -22,6 +22,10 @@ data class DayBucket(
     val unlockCount: Int,
     val firstUnlockAtMs: Long?,
     val lastUnlockAtMs: Long?,
+    /** Latest unlock before 6am on this calendar day (hour 0-5) - the sleep estimate's bedtime candidate. */
+    val lastUnlockBeforeSixAtMs: Long? = null,
+    /** Earliest unlock at/after 6am on this calendar day - the sleep estimate's wake candidate. */
+    val firstUnlockAfterSixAtMs: Long? = null,
     /** Index 0..23, number of unlocks that happened in that hour-of-day. */
     val unlockHourly: IntArray = IntArray(24),
     /** Index 0..23, number of times a (non-excluded) app moved to the foreground in that hour. */

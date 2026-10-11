@@ -263,6 +263,46 @@ fun TrendsScreen(onAppClick: (String) -> Unit) {
         state.nightUsage?.let { night ->
             item {
                 SectionCard(title = "Sommeil") {
+                    if (night.averageSleepMs != null) {
+                        Text(
+                            "Sommeil estimé : ${Formatters.duration(night.averageSleepMs)} en moyenne",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            "Dernier déverrouillage du soir -> premier du matin, moins 20 min pour s'endormir. " +
+                                "${night.sleepNights.size} nuit${if (night.sleepNights.size > 1) "s" else ""} estimée" +
+                                "${if (night.sleepNights.size > 1) "s" else ""} sur ${night.totalNights}.",
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        night.sleepNights.takeLast(7).reversed().forEach { sleepNight ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 3.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(
+                                    "${sleepNight.dateLabel} (${sleepNight.bedtimeLabel} -> ${sleepNight.wakeLabel})",
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                                Text(
+                                    Formatters.duration(sleepNight.durationMs),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                    } else {
+                        Text(
+                            "Pas assez de nuits avec un dernier déverrouillage le soir et un premier le matin " +
+                                "pour estimer ton temps de sommeil.",
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                        Spacer(Modifier.height(10.dp))
+                    }
                     Text(
                         "${night.nightsWithUsage} soir${if (night.nightsWithUsage > 1) "s" else ""} sur " +
                             "${night.totalNights} avec de l'activité entre 23h et 5h.",
